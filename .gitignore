@@ -1,0 +1,9 @@
+node_modules
+
+dist
+volumes
+
+bin/**/logs/*
+bin/**/input/*
+
+.env

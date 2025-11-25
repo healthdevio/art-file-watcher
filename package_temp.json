@@ -1,0 +1,8 @@
+{
+  "bin": "src/file-watcher.js",
+  "pkg": {
+    "scripts": "src/file-watcher.js",
+    "targets": ["node18-linux-x64"],
+    "assets": ["node_modules/chokidar/**"]
+  }
+}
