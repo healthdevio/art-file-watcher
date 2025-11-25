@@ -1,14 +1,14 @@
-# Guia de Teste do File Watcher no Windows
+# Guia de Teste no Windows
 
 ## Pré-requisitos
 
-1. O executável `file-watcher-windows.exe` já foi gerado
+1. O executável `art-w.exe` já foi gerado
 2. Um diretório para monitorar arquivos
 3. Um arquivo `.env` com as variáveis de ambiente necessárias
 
 ## Passo 1: Criar o arquivo .env
 
-Crie um arquivo chamado `.env` na **mesma pasta** onde está o `file-watcher-windows.exe` com o seguinte conteúdo:
+Crie um arquivo chamado `.env` na **mesma pasta** onde está o `art-w.exe` com o seguinte conteúdo:
 
 ```env
 WATCH_DIR=./volumes/input
@@ -48,9 +48,9 @@ New-Item -ItemType Directory -Path ".\volumes\logs" -Force
 
 ### Opção A: Pelo Explorador de Arquivos
 
-1. Navegue até a pasta onde está o `file-watcher-windows.exe`
+1. Navegue até a pasta onde está o `art-w.exe`
 2. Verifique se o arquivo `.env` está na mesma pasta
-3. Dê duplo clique no `file-watcher-windows.exe`
+3. Dê duplo clique no `art-w.exe`
 
 ### Opção B: Pelo PowerShell/CMD
 
@@ -61,20 +61,20 @@ New-Item -ItemType Directory -Path ".\volumes\logs" -Force
    ```
 3. Execute o aplicativo:
    ```powershell
-   .\file-watcher-windows.exe
+   .\art-w.exe
    ```
 
 ### Opção C: Pelo Terminal do VS Code
 
 ```powershell
-.\file-watcher-windows.exe
+.\art-w.exe
 ```
 
 ## Passo 4: Verificar se está funcionando
 
 Quando o aplicativo iniciar, você verá mensagens como:
 
-```
+```text/plain
 [INFO] O monitoramento será iniciado em: ./volumes/input
 [INFO] Os hashes serão enviados para: https://httpbin.org/post
 [INFO] Monitoramento iniciado com sucesso. Aguardando novos arquivos...
@@ -84,12 +84,12 @@ Quando o aplicativo iniciar, você verá mensagens como:
 
 1. **Mantenha o aplicativo rodando** (não feche a janela)
 2. Adicione um arquivo no diretório monitorado (`WATCH_DIR`):
-   
+
    ```powershell
    # Exemplo: copiar um arquivo para o diretório monitorado
    Copy-Item ".\algum-arquivo.txt" -Destination ".\volumes\input\"
    ```
-   
+
    Ou simplesmente arraste um arquivo para a pasta usando o Explorador do Windows.
 
 3. Você deverá ver no console:

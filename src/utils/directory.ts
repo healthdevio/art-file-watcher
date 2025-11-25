@@ -1,5 +1,6 @@
-import { existsSync, mkdirSync } from "fs";
-import { resolve } from "path";
+import { existsSync, mkdirSync } from 'fs';
+import { resolve } from 'path';
+import { safeLogger } from './logger';
 
 /**
  * Resultado da verificação de um diretório
@@ -18,10 +19,7 @@ export interface DirectoryCheckResult {
  * @param createIfNotExists - Se true, cria o diretório se não existir
  * @returns Resultado da verificação com caminho absoluto
  */
-export function ensureDirectory(
-  dirPath: string,
-  createIfNotExists: boolean = true
-): DirectoryCheckResult {
+export function ensureDirectory(dirPath: string, createIfNotExists: boolean = true): DirectoryCheckResult {
   try {
     // Resolve o caminho para absoluto
     const absolutePath = resolve(dirPath);
@@ -54,8 +52,7 @@ export function ensureDirectory(
     };
   } catch (error) {
     const absolutePath = resolve(dirPath);
-    const errorMessage =
-      error instanceof Error ? error.message : "Erro desconhecido";
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
 
     return {
       success: false,
@@ -73,11 +70,9 @@ export function ensureDirectory(
  * @returns Array com os resultados de cada verificação
  */
 export function ensureDirectories(
-  directories: Array<{ path: string; createIfNotExists?: boolean }>
+  directories: Array<{ path: string; createIfNotExists?: boolean }>,
 ): DirectoryCheckResult[] {
-  return directories.map((dir) =>
-    ensureDirectory(dir.path, dir.createIfNotExists ?? true)
-  );
+  return directories.map(dir => ensureDirectory(dir.path, dir.createIfNotExists ?? true));
 }
 
 /**
@@ -88,10 +83,8 @@ export function ensureDirectories(
  * @param logDir - Diretório de logs (pode ser criado se não existir)
  * @returns true se todos os diretórios estão prontos
  */
-export function validateApplicationDirectories(
-  watchDir: string,
-  logDir: string
-): boolean {
+export function validateApplicationDirectories(watchDir: string, logDir: string): boolean {
+  const logger = safeLogger();
   const results = ensureDirectories([
     { path: watchDir, createIfNotExists: false }, // Diretório de watch deve existir
     { path: logDir, createIfNotExists: true }, // Diretório de logs pode ser criado
@@ -101,13 +94,12 @@ export function validateApplicationDirectories(
 
   for (const result of results) {
     if (result.success) {
-      console.log(`[✓] ${result.message}`);
+      logger.info(`[✓] ${result.message}`);
     } else {
-      console.error(`[✗] ${result.message}`);
+      logger.error(`[✗] ${result.message}`);
       allValid = false;
     }
   }
 
   return allValid;
 }
-

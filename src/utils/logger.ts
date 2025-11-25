@@ -6,10 +6,10 @@ import DailyRotateFile from 'winston-daily-rotate-file';
 let loggerInstance: WinstonLogger;
 
 const levelIcons: Record<string, string> = {
-  info: 'ℹ️',
-  warn: '⚠️',
-  error: '❌',
-  success: '✅',
+  info: '🛈',
+  warn: '⚠',
+  error: '✖',
+  success: '✔',
   hash: '🔐',
 };
 
@@ -58,12 +58,7 @@ export function initLogger(logDir: string, level: string = 'info'): WinstonLogge
   loggerInstance = createLogger({
     level,
     format: fileFormat,
-    transports: [
-      new transports.Console({
-        format: consoleFormat,
-      }),
-      rotateTransport,
-    ],
+    transports: [new transports.Console({ format: consoleFormat }), rotateTransport],
     exitOnError: false,
   });
 
@@ -78,4 +73,17 @@ export function getLogger(): WinstonLogger {
     throw new Error('Logger ainda não inicializado. Chame initLogger() primeiro.');
   }
   return loggerInstance;
+}
+
+export function safeLogger() {
+  try {
+    return getLogger();
+  } catch {
+    return {
+      // eslint-disable-next-line no-console
+      info: console.log,
+      error: console.error,
+      warn: console.warn,
+    };
+  }
 }

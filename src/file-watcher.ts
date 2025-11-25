@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-floating-promises */
 import 'dotenv/config';
 import { environment } from './config/environment';
 import { ApiClient } from './services/api-client';
 import { FileWatcherService } from './services/file-watcher-service';
 import { validateApplicationDirectories } from './utils/directory';
-import { getLogger, initLogger } from './utils/logger';
+import { initLogger, safeLogger } from './utils/logger';
 
 /**
  * Inicializa e inicia a aplicação File Watcher
@@ -72,25 +73,14 @@ function setupGracefulShutdown(fileWatcherService: FileWatcherService): void {
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('uncaughtException', (error: Error) => {
     logger.error(`Exceção não capturada: ${error.message}`);
-    shutdown('uncaughtException');
+    void shutdown('uncaughtException');
   });
   process.on('unhandledRejection', (reason: unknown) => {
     const message = reason instanceof Error ? reason.message : String(reason);
+
     logger.error(`Promessa rejeitada não tratada: ${message}`);
     shutdown('unhandledRejection');
   });
-}
-
-function safeLogger() {
-  try {
-    return getLogger();
-  } catch {
-    return {
-      info: console.log,
-      error: console.error,
-      warn: console.warn,
-    };
-  }
 }
 
 // Inicia a aplicação

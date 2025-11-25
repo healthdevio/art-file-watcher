@@ -6,7 +6,7 @@ O projeto foi refatorado seguindo os princípios de **Separação de Responsabil
 
 ## Estrutura de Diretórios
 
-```
+```text/plain
 src/
 ├── config/
 │   └── environment.ts          # Validação de variáveis de ambiente
@@ -23,6 +23,7 @@ src/
 ## Responsabilidades de Cada Módulo
 
 ### 📁 `config/environment.ts`
+
 **Responsabilidade:** Validação e exportação das variáveis de ambiente
 
 - Valida todas as variáveis de ambiente necessárias usando Zod
@@ -31,6 +32,7 @@ src/
 - Lança erro imediatamente se variáveis estiverem inválidas/ausentes
 
 ### 📁 `utils/directory.ts`
+
 **Responsabilidade:** Verificação e criação de diretórios
 
 - `ensureDirectory()`: Verifica se um diretório existe e cria se necessário
@@ -40,6 +42,7 @@ src/
 - Retorna resultados estruturados com mensagens claras
 
 ### 📁 `services/file-hash.ts`
+
 **Responsabilidade:** Geração de hash SHA256 de arquivos
 
 - `generateFileHash()`: Gera hash usando streams para eficiência de memória
@@ -48,6 +51,7 @@ src/
 - Retorna Promise com resultado tipado (`HashResult`)
 
 ### 📁 `services/api-client.ts`
+
 **Responsabilidade:** Comunicação com a API externa
 
 - `ApiClient`: Classe para envio de hashes para o endpoint configurado
@@ -56,6 +60,7 @@ src/
 - Retorna resultados estruturados (`ApiResponse`)
 
 ### 📁 `services/file-watcher-service.ts`
+
 **Responsabilidade:** Monitoramento de arquivos usando Chokidar
 
 - `FileWatcherService`: Classe que gerencia o monitoramento
@@ -65,6 +70,7 @@ src/
 - Métodos `start()` e `stop()` para controle do serviço
 
 ### 📁 `file-watcher.ts`
+
 **Responsabilidade:** Orquestração e inicialização da aplicação
 
 - Função `main()`: Ponto de entrada da aplicação
@@ -78,7 +84,7 @@ src/
 
 ## Fluxo de Execução
 
-```
+```text/plain
 1. Importação de variáveis de ambiente
    └── Validação automática (se falhar, aplicação não inicia)
 
@@ -101,50 +107,60 @@ src/
 ## Melhores Práticas Aplicadas
 
 ### ✅ Separação de Responsabilidades (SRP)
+
 Cada módulo tem uma única responsabilidade bem definida.
 
 ### ✅ Tratamento de Erros Robusto
+
 - Validação de entrada em todas as camadas
 - Mensagens de erro claras e informativas
 - Handlers para todos os tipos de erro (rede, arquivo, sistema)
 
 ### ✅ Tipagem Forte com TypeScript
+
 - Interfaces bem definidas para todos os dados
 - Tipos exportados para reutilização
 - Validação em tempo de compilação
 
 ### ✅ Código Modular e Testável
+
 - Funções puras onde possível
 - Dependências injetadas (não hardcoded)
 - Facilita testes unitários e de integração
 
 ### ✅ Verificação Prévia
+
 - Validação de ambiente antes de iniciar
 - Verificação de diretórios antes de monitorar
 - Mensagens claras se algo estiver faltando
 
 ### ✅ Encerramento Gracioso
+
 - Handlers para sinais do sistema (SIGINT, SIGTERM)
 - Limpeza de recursos antes de encerrar
 - Logs informativos durante o encerramento
 
 ### ✅ Eficiência de Memória
+
 - Uso de streams para arquivos grandes
 - Processamento assíncrono não-bloqueante
 
 ## Como Usar
 
 ### Desenvolvimento
+
 ```bash
 npm run start:dev
 ```
 
 ### Build
+
 ```bash
 npm run build
 ```
 
 ### Gerar Binário
+
 ```bash
 npm run pkg:windows  # Windows
 npm run pkg:linux    # Linux
@@ -167,4 +183,3 @@ LOG_DIR=./volumes/logs         # Diretório de logs (pode ser criado)
 4. **Debugging**: Erros são mais fáceis de rastrear
 5. **Extensibilidade**: Fácil adicionar novos recursos sem quebrar código existente
 6. **Confiabilidade**: Validações e verificações previnem erros em runtime
-
