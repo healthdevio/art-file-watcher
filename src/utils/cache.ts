@@ -1,5 +1,6 @@
 import { promises as fs } from 'fs';
-import { dirname, join } from 'path';
+import { dirname, join, resolve } from 'path';
+import { environment } from '../config/environment';
 
 export interface CacheEntry {
   hash: string;
@@ -9,7 +10,7 @@ export interface CacheEntry {
   modifiedAt: number;
 }
 
-const CACHE_BASE = join(process.cwd(), 'cache');
+const CACHE_BASE = environment.CACHE_DIR ? resolve(environment.CACHE_DIR) : join(process.cwd(), 'cache');
 
 function getCacheFilePath(hash: string): string {
   const bucket = hash.slice(0, 2) || 'xx';

@@ -6,6 +6,7 @@ const environmentSchema = z.object({
   API_ENDPOINT: z.url('API_ENDPOINT deve ser uma URL válida'),
   API_KEY: z.string().min(1, 'API_KEY não pode estar vazio'),
   LOG_DIR: z.string().min(1, 'LOG_DIR não pode estar vazio'),
+  CACHE_DIR: z.string().optional(),
   FILE_EXTENSION_FILTER: z.string().optional(),
 });
 

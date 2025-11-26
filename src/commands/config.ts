@@ -9,11 +9,12 @@ export interface ConfigCommandOptions {
   apiEndpoint?: string;
   apiKey?: string;
   extensions?: string;
+  cacheDir?: string;
   configFilePath?: string;
 }
 
 const requiredKeys = ['WATCH_DIR', 'API_ENDPOINT', 'API_KEY', 'LOG_DIR'] as const;
-const envKeys = [...requiredKeys, 'FILE_EXTENSION_FILTER'] as const;
+const envKeys = [...requiredKeys, 'FILE_EXTENSION_FILTER', 'CACHE_DIR'] as const;
 
 function loadExistingConfig(configFile: string): Record<string, string> {
   if (!existsSync(configFile)) {
@@ -35,6 +36,9 @@ export function writeConfig(options: ConfigCommandOptions): string {
   if (options.apiEndpoint) mergedConfig.API_ENDPOINT = options.apiEndpoint;
   if (options.apiKey) mergedConfig.API_KEY = options.apiKey;
   if (options.extensions !== undefined) {
+  if (options.cacheDir !== undefined) {
+    mergedConfig.CACHE_DIR = options.cacheDir;
+  }
     mergedConfig.FILE_EXTENSION_FILTER = options.extensions
       .split(',')
       .map(ext => ext.trim())
@@ -52,6 +56,9 @@ export function writeConfig(options: ConfigCommandOptions): string {
   }
   if (mergedConfig.LOG_DIR) {
     ensureDirectory(mergedConfig.LOG_DIR);
+  }
+  if (mergedConfig.CACHE_DIR) {
+    ensureDirectory(mergedConfig.CACHE_DIR);
   }
 
   const content = envKeys
