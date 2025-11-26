@@ -1,6 +1,6 @@
-import { createReadStream } from "fs";
-import { createHash } from "crypto";
-import { basename } from "path";
+import { createHash } from 'crypto';
+import { createReadStream } from 'fs';
+import { basename } from 'path';
 
 /**
  * Resultado da geração de hash de um arquivo
@@ -19,9 +19,9 @@ export interface HashResult {
  */
 function extractFileName(filePath: string): string {
   try {
-    return basename(filePath) || "unknown_file";
+    return basename(filePath) || 'unknown_file';
   } catch {
-    return "unknown_file";
+    return 'unknown_file';
   }
 }
 
@@ -34,16 +34,16 @@ function extractFileName(filePath: string): string {
  */
 export function generateFileHash(filePath: string): Promise<HashResult> {
   return new Promise((resolve, reject) => {
-    const hash = createHash("sha256");
+    const hash = createHash('sha256');
     const stream = createReadStream(filePath);
     const fileName = extractFileName(filePath);
 
-    stream.on("data", (data: Buffer | string) => {
+    stream.on('data', (data: Buffer | string) => {
       hash.update(data);
     });
 
-    stream.on("end", () => {
-      const fileHash = hash.digest("hex");
+    stream.on('end', () => {
+      const fileHash = hash.digest('hex');
       resolve({
         fileName,
         fileHash,
@@ -51,21 +51,14 @@ export function generateFileHash(filePath: string): Promise<HashResult> {
       });
     });
 
-    stream.on("error", (err: NodeJS.ErrnoException) => {
+    stream.on('error', (err: NodeJS.ErrnoException) => {
       // Erros comuns que podem ser ignorados
-      if (err.code === "ENOENT") {
-        reject(
-          new Error(
-            `Arquivo não encontrado ou removido antes de ser processado: ${filePath}`
-          )
-        );
+      if (err.code === 'ENOENT') {
+        reject(new Error(`Arquivo não encontrado ou removido antes de ser processado: ${filePath}`));
         return;
       }
 
-      reject(
-        new Error(`Erro ao ler arquivo ${filePath}: ${err.message}`)
-      );
+      reject(new Error(`Erro ao ler arquivo ${filePath}: ${err.message}`));
     });
   });
 }
-

@@ -43,6 +43,7 @@ export async function runFileWatcher(): Promise<void> {
       extensionFilter: FILE_EXTENSION_FILTER,
     });
 
+    await fileWatcherService.seedExistingFiles();
     fileWatcherService.start();
     setupGracefulShutdown(fileWatcherService);
   } catch (error: unknown) {
