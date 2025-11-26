@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-floating-promises */
 import 'dotenv/config';
 import { environment } from './config/environment';
+import { APP_VERSION } from './config/version';
 import { ApiClient } from './services/api-client';
 import { FileWatcherService } from './services/file-watcher-service';
 import { validateApplicationDirectories } from './utils/directory';
@@ -14,7 +15,7 @@ export async function runFileWatcher(): Promise<void> {
     const { WATCH_DIR, API_ENDPOINT, API_KEY, LOG_DIR, FILE_EXTENSION_FILTER } = environment;
     const logger = initLogger(LOG_DIR);
 
-    logger.info('=== File Watcher Service ===');
+    logger.info(`=== File Watcher Service v${APP_VERSION} ===`);
     logger.info('Variáveis de ambiente validadas');
     logger.info(`Diretório de monitoramento: ${WATCH_DIR}`);
     logger.info(`Endpoint da API: ${API_ENDPOINT}`);

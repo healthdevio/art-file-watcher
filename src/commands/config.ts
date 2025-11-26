@@ -35,10 +35,9 @@ export function writeConfig(options: ConfigCommandOptions): string {
   if (options.logDir) mergedConfig.LOG_DIR = options.logDir;
   if (options.apiEndpoint) mergedConfig.API_ENDPOINT = options.apiEndpoint;
   if (options.apiKey) mergedConfig.API_KEY = options.apiKey;
+  if (options.cacheDir !== undefined) mergedConfig.CACHE_DIR = options.cacheDir;
+
   if (options.extensions !== undefined) {
-  if (options.cacheDir !== undefined) {
-    mergedConfig.CACHE_DIR = options.cacheDir;
-  }
     mergedConfig.FILE_EXTENSION_FILTER = options.extensions
       .split(',')
       .map(ext => ext.trim())
