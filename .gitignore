@@ -3,6 +3,7 @@ node_modules
 dist
 volumes
 
+bin/**/cache/*
 bin/**/logs/*
 bin/**/input/*
 cache/*
