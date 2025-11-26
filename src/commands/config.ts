@@ -8,10 +8,12 @@ export interface ConfigCommandOptions {
   logDir?: string;
   apiEndpoint?: string;
   apiKey?: string;
+  extensions?: string;
   configFilePath?: string;
 }
 
-const envKeys = ['WATCH_DIR', 'API_ENDPOINT', 'API_KEY', 'LOG_DIR'] as const;
+const requiredKeys = ['WATCH_DIR', 'API_ENDPOINT', 'API_KEY', 'LOG_DIR'] as const;
+const envKeys = [...requiredKeys, 'FILE_EXTENSION_FILTER'] as const;
 
 function loadExistingConfig(configFile: string): Record<string, string> {
   if (!existsSync(configFile)) {
@@ -32,14 +34,25 @@ export function writeConfig(options: ConfigCommandOptions): string {
   if (options.logDir) mergedConfig.LOG_DIR = options.logDir;
   if (options.apiEndpoint) mergedConfig.API_ENDPOINT = options.apiEndpoint;
   if (options.apiKey) mergedConfig.API_KEY = options.apiKey;
+  if (options.extensions !== undefined) {
+    mergedConfig.FILE_EXTENSION_FILTER = options.extensions
+      .split(',')
+      .map(ext => ext.trim())
+      .filter(Boolean)
+      .join(',');
+  }
 
-  const missingKeys = envKeys.filter(key => !mergedConfig[key]);
+  const missingKeys = requiredKeys.filter(key => !mergedConfig[key]);
   if (!existsSync(configFile) && missingKeys.length > 0) {
     throw new Error(`Faltam as variáveis ${missingKeys.join(', ')}. Forneça-as agora (ex: --watch-dir /path).`);
   }
 
-  ensureDirectory(mergedConfig.WATCH_DIR ?? '');
-  ensureDirectory(mergedConfig.LOG_DIR ?? '');
+  if (mergedConfig.WATCH_DIR) {
+    ensureDirectory(mergedConfig.WATCH_DIR);
+  }
+  if (mergedConfig.LOG_DIR) {
+    ensureDirectory(mergedConfig.LOG_DIR);
+  }
 
   const content = envKeys
     .map(key => `${key}=${mergedConfig[key] ?? ''}`)

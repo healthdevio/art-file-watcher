@@ -14,6 +14,7 @@ program
   .option('--log-dir <path>', 'Diretório onde os logs serão gravados')
   .option('--api-endpoint <url>', 'Endpoint que receberá os hashes')
   .option('--api-key <key>', 'Chave de autenticação da API')
+  .option('--extensions <list>', 'Filtro de extensões separados por vírgula (ex: .ret,.txt)')
   .option('--config-file <path>', 'Caminho do arquivo de configuração', '.env')
   .action((options: ConfigCommandOptions) => {
     try {

@@ -44,7 +44,7 @@
     "typescript-eslint": "^8.48.0"
   },
   "pkg": {
-    "scripts": "dist/file-watcher.js",
+    "scripts": "dist/index.js",
     "assets": [
       "node_modules/chokidar/**/*"
     ]

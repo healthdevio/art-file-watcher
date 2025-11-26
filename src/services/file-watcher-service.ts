@@ -1,4 +1,5 @@
 import chokidar, { FSWatcher } from 'chokidar';
+import { extname } from 'path';
 import { getLogger } from '../utils/logger';
 import { ApiClient } from './api-client';
 import { generateFileHash } from './file-hash';
@@ -9,6 +10,7 @@ import { generateFileHash } from './file-hash';
 export interface FileWatcherConfig {
   watchDir: string;
   apiClient: ApiClient;
+  extensionFilter?: string;
 }
 
 /**
@@ -18,13 +20,17 @@ export class FileWatcherService {
   private readonly watcher: FSWatcher;
   private readonly apiClient: ApiClient;
   private readonly logger = getLogger();
+  private readonly extensionFilters: string[];
 
   constructor(config: FileWatcherConfig) {
     this.apiClient = config.apiClient;
+    this.extensionFilters = this.normalizeExtensions(config.extensionFilter);
+    const extensionLabel = this.extensionFilters.join(', ') || 'nenhum (todos)';
+    this.logger.info(`[INFO] Filtro de extensões ativo: ${extensionLabel}`);
 
     // Configuração do chokidar
     this.watcher = chokidar.watch(config.watchDir, {
-      ignored: /(^|[\/\\])\../, // Ignora arquivos ocultos (que começam com .)
+      ignored: /(^|[\\/])\../, // Ignora arquivos ocultos (que começam com .)
       persistent: true,
       ignoreInitial: true, // Não processa arquivos que já existem ao iniciar
       awaitWriteFinish: {
@@ -41,9 +47,12 @@ export class FileWatcherService {
    */
   private setupEventHandlers(): void {
     // Quando um novo arquivo é adicionado
-    this.watcher.on('add', async (filePath: string) => {
+    const processFile = async (filePath: string) => {
       await this.handleFileAdded(filePath);
-    });
+    };
+
+    this.watcher.on('add', processFile);
+    this.watcher.on('change', processFile);
 
     // Quando ocorre um erro no watcher
     this.watcher.on('error', (error: Error) => {
@@ -62,6 +71,11 @@ export class FileWatcherService {
    */
   private async handleFileAdded(filePath: string): Promise<void> {
     try {
+      if (!this.shouldProcessFile(filePath)) {
+        this.logger.info(`[INFO] Arquivo ignorado pelo filtro de extensões: ${filePath}`);
+        return;
+      }
+
       this.logger.info(`[HASH] Arquivo detectado: ${filePath}`);
 
       // Gera o hash do arquivo
@@ -105,5 +119,20 @@ export class FileWatcherService {
     this.logger.info('[INFO] Encerrando o monitoramento...');
     await this.watcher.close();
     this.logger.info('[INFO] Monitoramento encerrado');
+  }
+
+  private shouldProcessFile(filePath: string): boolean {
+    if (!this.extensionFilters.length) return true;
+    const extension = extname(filePath).toLowerCase();
+    return this.extensionFilters.includes(extension);
+  }
+
+  private normalizeExtensions(raw?: string): string[] {
+    if (!raw) return [];
+    return raw
+      .split(',')
+      .map(value => value.trim())
+      .filter(Boolean)
+      .map(value => (value.startsWith('.') ? value.toLowerCase() : `.${value.toLowerCase()}`));
   }
 }
