@@ -100,26 +100,26 @@ export class FileWatcherService {
       const stats = await stat(filePath);
 
       if (!this.shouldProcessFile(filePath)) {
-        this.logger.info(`[INFO] Arquivo ignorado pelo filtro de extensões: ${filePath}`);
+        this.logger.info(`Arquivo ignorado pelo filtro de extensões: ${filePath}`);
         return;
       }
 
-      this.logger.info(`[HASH] Arquivo detectado: ${filePath}`);
+      this.logger.info(`Arquivo detectado: ${filePath}`);
 
       // Gera o hash do arquivo
       const hashResult = await generateFileHash(filePath);
 
-      this.logger.info(`[HASH] Hash Gerado (SHA256): ${hashResult.fileHash}`);
+      this.logger.info(`Hash Gerado (SHA256): ${hashResult.fileHash}`);
 
       const cached = await readCache(hashResult.fileHash);
 
       if (cached && cached.size === stats.size && cached.modifiedAt === stats.mtimeMs) {
-        this.logger.info(`[CACHE] Já processado (${hashResult.fileHash}) - ignorando.`);
+        this.logger.debug(`Já processado (${hashResult.fileHash}) - ignorando.`);
         return;
       }
 
       // Envia o hash para a API
-      const apiResponse = await this.apiClient.sendHash(hashResult);
+      const apiResponse = await this.apiClient.uploadFiles([{ filePath, hashResult }]);
 
       if (apiResponse.success) {
         await writeCache({
@@ -135,6 +135,7 @@ export class FileWatcherService {
         this.logger.error(`[ERROR] ${apiResponse?.message}`);
       }
     } catch (error) {
+      console.error(error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
 
       // Trata erros específicos

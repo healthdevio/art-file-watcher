@@ -1,3 +1,7 @@
+import axios, { AxiosError, AxiosInstance } from 'axios';
+import FormData from 'form-data';
+import { createReadStream } from 'node:fs';
+import { makeUserAgent } from '../utils/system';
 import { HashResult } from './file-hash';
 
 /**
@@ -30,12 +34,22 @@ export interface ApiResponse {
  * Cliente para comunicação com a API de envio de hashes
  */
 export class ApiClient {
+  private readonly api: AxiosInstance;
   private readonly endpoint: string;
   private readonly apiKey: string;
 
   constructor(config: ApiClientConfig) {
     this.endpoint = config.endpoint;
     this.apiKey = config.apiKey;
+
+    this.api = axios.create({
+      baseURL: this.endpoint,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.apiKey}`,
+        'User-Agent': makeUserAgent(),
+      },
+    });
   }
 
   /**
@@ -52,16 +66,11 @@ export class ApiClient {
     };
 
     try {
-      const response = await fetch(this.endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.apiKey}`,
-        },
-        body: JSON.stringify(payload),
+      const response = await this.api.post(this.endpoint, payload, {
+        validateStatus: () => true,
       });
 
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         return {
           success: true,
           statusCode: response.status,
@@ -69,29 +78,64 @@ export class ApiClient {
         };
       }
 
-      // Tenta ler a resposta de erro
-      let errorMessage = `Falha ao enviar hash. Status: ${response.status}`;
-      try {
-        const errorText = await response.text();
-        if (errorText) {
-          errorMessage += `. Resposta: ${errorText}`;
-        }
-      } catch {
-        // Ignora erros ao ler a resposta
-      }
+      const errorMessage = response.data
+        ? `Falha ao enviar hash. Status: ${response.status}. Resposta: ${JSON.stringify(response.data)}`
+        : `Falha ao enviar hash. Status: ${response.status}`;
 
       return {
-        success: true, // temporário apenas para testes
+        success: false,
         statusCode: response.status,
         message: errorMessage,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido na requisição';
+      const axiosError = error as AxiosError;
+      const errorMessage =
+        axiosError instanceof Error && axiosError.message ? axiosError.message : 'Erro desconhecido na requisição';
 
       return {
-        success: true, // temporário apenas para testes
+        success: false,
         message: `Erro na requisição de rede para ${this.endpoint}: ${errorMessage}`,
       };
     }
+  }
+
+  async uploadFiles(files: Array<{ filePath: string; hashResult: HashResult }>): Promise<ApiResponse> {
+    const metadata = files.map(file => ({
+      fileName: file.hashResult.fileName,
+      fileHash: file.hashResult.fileHash,
+      timestamp: new Date().toISOString(),
+    }));
+    const formData = new FormData();
+    files.forEach(({ filePath, hashResult }) => {
+      formData.append('files', createReadStream(filePath), {
+        filename: hashResult.fileName,
+      });
+    });
+    formData.append('metadata', JSON.stringify(metadata));
+
+    const response = await this.api.post('watcher-extraction/upload', formData, {
+      headers: {
+        ...formData.getHeaders(),
+      },
+      validateStatus: () => true,
+    });
+
+    if (response.status >= 200 && response.status < 300) {
+      return {
+        success: true,
+        statusCode: response.status,
+        message: `Arquivo enviado com sucesso para ${this.endpoint}/watcher-extraction/upload`,
+      };
+    }
+
+    const responseMessage = response.data
+      ? `Envio falhou. Status: ${response.status}. Resposta: ${JSON.stringify(response.data)}`
+      : `Envio falhou. Status: ${response.status}`;
+
+    return {
+      success: false,
+      statusCode: response.status,
+      message: responseMessage,
+    };
   }
 }

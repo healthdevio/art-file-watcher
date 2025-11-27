@@ -8,4 +8,7 @@ bin/**/logs/*
 bin/**/input/*
 cache/*
 
+docs/**/*.zip
+docs/arquivos**
+
 .env

@@ -10,7 +10,7 @@
   },
   "scripts": {
     "start": "node dist/index.js",
-    "start:dev": "npm run generate-version && tsx watch src/index.ts",
+    "dev": "npm run generate-version && tsx watch src/index.ts",
     "bindir": "node scripts/create-bin-dir.mjs",
     "build": "tsc",
     "pkg:linux": "npm run build && npm run bindir && pkg --targets node18-linux-x64 --output ./bin/art-w dist/index.js",
@@ -21,9 +21,11 @@
   },
   "dependencies": {
     "@types/winston": "^2.4.4",
+    "axios": "^1.13.2",
     "chokidar": "^3.6.0",
     "commander": "^14.0.2",
     "dotenv": "^16.6.1",
+    "form-data": "^4.0.0",
     "winston": "^3.18.3",
     "winston-daily-rotate-file": "^5.0.0",
     "zod": "^4.1.13"
