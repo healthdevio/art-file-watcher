@@ -6,7 +6,7 @@ Este diretório contém os testes unitários da aplicação utilizando Jest.
 
 Os testes estão organizados na pasta `__tests__/` na raiz do projeto (padrão do Jest), mantendo uma estrutura similar ao código fonte:
 
-```
+```text
 __tests__/
   utils/
     number.test.ts       # Testes para normalizeNumber
@@ -16,16 +16,17 @@ __tests__/
 ## Executando os Testes
 
 ### Executar todos os testes
-```bash
-npm test
-```
+
+`npm run test`
 
 ### Executar testes em modo watch (re-executa ao salvar arquivos)
+
 ```bash
 npm run test:watch
 ```
 
 ### Executar testes com cobertura de código
+
 ```bash
 npm run test:coverage
 ```
@@ -39,6 +40,7 @@ npm run test:coverage
 2. Nomeie os arquivos com sufixo `.test.ts` ou `.spec.ts`
 
 3. Estrutura básica de um teste:
+
 ```typescript
 import { minhaFuncao } from '../../src/utils/meu-modulo';
 
@@ -61,6 +63,6 @@ describe('minhaFuncao', () => {
 ## Exemplos
 
 Veja os arquivos de teste existentes para exemplos:
+
 - `utils/number.test.ts` - Testes simples de funções utilitárias
 - `utils/directory.test.ts` - Testes que envolvem operações de sistema de arquivos
-

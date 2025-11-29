@@ -16,6 +16,7 @@ export default tseslint.config(
       'package.json',
       'package-lock.json',
       'tsconfig.json',
+      'tsconfig.test.json',
       // Build e artefatos
       'dist/**',
       'scripts/**',
@@ -30,7 +31,7 @@ export default tseslint.config(
   ...tseslint.configs.recommendedTypeChecked,
   eslintPluginPrettierRecommended,
   {
-    files: ['src/**/*.ts', '__tests__/**/*.ts'],
+    files: ['src/**/*.ts'],
     languageOptions: {
       globals: {
         ...globals.node,
