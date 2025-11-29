@@ -4,7 +4,7 @@
     "target": "ES2022" /* Especifica a versão alvo do JavaScript. */,
     "module": "CommonJS" /* Usa o módulo CommonJS, compatível com o pkg. */,
     "moduleResolution": "node" /* Define como o TypeScript deve resolver módulos. */,
-    "rootDir": "./src" /* Especifica a pasta raiz dos arquivos TS. */,
+    /* rootDir removido: TypeScript infere automaticamente baseado nos arquivos incluídos */
     "outDir": "./dist" /* Especifica o diretório de saída para os arquivos JS compilados. */,
     "esModuleInterop": true /* Permite a importação de módulos CommonJS usando a sintaxe de importação padrão. */,
 
@@ -14,7 +14,7 @@
     "forceConsistentCasingInFileNames": true /* Garante que o uso de maiúsculas e minúsculas nos nomes de arquivos seja consistente. */
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "scripts/**/*.mjs"],
+  "exclude": ["node_modules", "scripts/**/*.mjs", "dist", "bin", "coverage", "__tests__"],
   "ts-node": {
     "esm": true
   }

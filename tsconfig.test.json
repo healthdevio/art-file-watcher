@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    /* Não compila testes - apenas verifica tipos */
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "__tests__/**/*.ts"],
+  "exclude": ["node_modules", "scripts/**/*.mjs", "dist", "bin", "coverage"]
+}

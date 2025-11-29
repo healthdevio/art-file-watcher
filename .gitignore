@@ -1,7 +1,9 @@
 node_modules
 
 dist
-volumes
+volumes/cache
+volumes/logs
+volumes/input
 
 bin/**/cache/*
 bin/**/logs/*
@@ -13,3 +15,8 @@ docs/arquivos**
 docs/cursor
 
 .env
+
+# Testes
+coverage
+volumes/.test-temp
+volumes/.test-temp/**
