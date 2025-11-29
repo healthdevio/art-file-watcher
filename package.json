@@ -50,6 +50,9 @@
   },
   "pkg": {
     "scripts": "dist/bundle.js",
+    "options": [
+      "--expose-gc"
+    ],
     "assets": [
       "node_modules/chokidar/**/*"
     ]
