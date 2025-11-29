@@ -1,6 +1,4 @@
-import axios, { AxiosError, AxiosInstance } from 'axios';
-import FormData from 'form-data';
-import { createReadStream } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { makeUserAgent } from '../utils/system';
 import { HashResult } from './file-hash';
 
@@ -32,24 +30,27 @@ export interface ApiResponse {
 
 /**
  * Cliente para comunicação com a API de envio de hashes
+ * Usa fetch nativo do Node.js 18+ (sem dependências externas)
  */
 export class ApiClient {
-  private readonly api: AxiosInstance;
   private readonly endpoint: string;
   private readonly apiKey: string;
+  private readonly userAgent: string;
 
   constructor(config: ApiClientConfig) {
     this.endpoint = config.endpoint;
     this.apiKey = config.apiKey;
+    this.userAgent = makeUserAgent();
+  }
 
-    this.api = axios.create({
-      baseURL: this.endpoint,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.apiKey}`,
-        'User-Agent': makeUserAgent(),
-      },
-    });
+  /**
+   * Headers padrão para todas as requisições
+   */
+  private getDefaultHeaders(): Record<string, string> {
+    return {
+      Authorization: `Bearer ${this.apiKey}`,
+      'User-Agent': this.userAgent,
+    };
   }
 
   /**
@@ -66,31 +67,49 @@ export class ApiClient {
     };
 
     try {
-      const response = await this.api.post(this.endpoint, payload, {
-        validateStatus: () => true,
+      const response = await fetch(this.endpoint, {
+        method: 'POST',
+        headers: {
+          ...this.getDefaultHeaders(),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
       });
 
-      if (response.status >= 200 && response.status < 300) {
+      const statusCode = response.status;
+      let responseData: unknown;
+
+      try {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          responseData = await response.json();
+        } else {
+          responseData = await response.text();
+        }
+      } catch {
+        // Se não conseguir ler o corpo, continua
+        responseData = null;
+      }
+
+      if (statusCode >= 200 && statusCode < 300) {
         return {
           success: true,
-          statusCode: response.status,
+          statusCode,
           message: `Hash enviado com sucesso para ${this.endpoint}`,
         };
       }
 
-      const errorMessage = response.data
-        ? `Falha ao enviar hash. Status: ${response.status}. Resposta: ${JSON.stringify(response.data)}`
-        : `Falha ao enviar hash. Status: ${response.status}`;
+      const errorMessage = responseData
+        ? `Falha ao enviar hash. Status: ${statusCode}. Resposta: ${JSON.stringify(responseData)}`
+        : `Falha ao enviar hash. Status: ${statusCode}`;
 
       return {
         success: false,
-        statusCode: response.status,
+        statusCode,
         message: errorMessage,
       };
     } catch (error) {
-      const axiosError = error as AxiosError;
-      const errorMessage =
-        axiosError instanceof Error && axiosError.message ? axiosError.message : 'Erro desconhecido na requisição';
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido na requisição';
 
       return {
         success: false,
@@ -99,43 +118,81 @@ export class ApiClient {
     }
   }
 
+  /**
+   * Envia arquivos usando multipart/form-data
+   *
+   * @param files - Array de arquivos com seus hashes
+   * @returns Promise com o resultado do envio
+   */
   async uploadFiles(files: Array<{ filePath: string; hashResult: HashResult }>): Promise<ApiResponse> {
     const metadata = files.map(file => ({
       fileName: file.hashResult.fileName,
       fileHash: file.hashResult.fileHash,
       timestamp: new Date().toISOString(),
     }));
-    const formData = new FormData();
-    files.forEach(({ filePath, hashResult }) => {
-      formData.append('files', createReadStream(filePath), {
-        filename: hashResult.fileName,
+
+    try {
+      // Usa FormData nativo do Node.js 18+
+      const formData = new FormData();
+
+      // Adiciona os arquivos
+      for (const { filePath, hashResult } of files) {
+        const fileBuffer = readFileSync(filePath);
+        const blob = new Blob([fileBuffer]);
+        formData.append('files', blob, hashResult.fileName);
+      }
+
+      // Adiciona metadata
+      formData.append('metadata', JSON.stringify(metadata));
+
+      const uploadUrl = `${this.endpoint}/watcher-extraction/upload`;
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: {
+          ...this.getDefaultHeaders(),
+          // Não definir Content-Type - fetch define automaticamente com boundary
+        },
+        body: formData,
       });
-    });
-    formData.append('metadata', JSON.stringify(metadata));
 
-    const response = await this.api.post('watcher-extraction/upload', formData, {
-      headers: {
-        ...formData.getHeaders(),
-      },
-      validateStatus: () => true,
-    });
+      const statusCode = response.status;
+      let responseData: unknown;
 
-    if (response.status >= 200 && response.status < 300) {
+      try {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          responseData = await response.json();
+        } else {
+          responseData = await response.text();
+        }
+      } catch {
+        responseData = null;
+      }
+
+      if (statusCode >= 200 && statusCode < 300) {
+        return {
+          success: true,
+          statusCode,
+          message: `Arquivo enviado com sucesso para ${uploadUrl}`,
+        };
+      }
+
+      const responseMessage = responseData
+        ? `Envio falhou. Status: ${statusCode}. Resposta: ${JSON.stringify(responseData)}`
+        : `Envio falhou. Status: ${statusCode}`;
+
       return {
-        success: true,
-        statusCode: response.status,
-        message: `Arquivo enviado com sucesso para ${this.endpoint}/watcher-extraction/upload`,
+        success: false,
+        statusCode,
+        message: responseMessage,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido no upload';
+
+      return {
+        success: false,
+        message: `Erro no upload para ${this.endpoint}: ${errorMessage}`,
       };
     }
-
-    const responseMessage = response.data
-      ? `Envio falhou. Status: ${response.status}. Resposta: ${JSON.stringify(response.data)}`
-      : `Envio falhou. Status: ${response.status}`;
-
-    return {
-      success: false,
-      statusCode: response.status,
-      message: responseMessage,
-    };
   }
 }
