@@ -10,11 +10,12 @@ export interface ConfigCommandOptions {
   apiKey?: string;
   extensions?: string;
   cacheDir?: string;
+  queueConcurrency?: string;
   configFilePath?: string;
 }
 
 const requiredKeys = ['WATCH_DIR', 'API_ENDPOINT', 'API_KEY', 'LOG_DIR'] as const;
-const envKeys = [...requiredKeys, 'FILE_EXTENSION_FILTER', 'CACHE_DIR'] as const;
+const envKeys = [...requiredKeys, 'FILE_EXTENSION_FILTER', 'CACHE_DIR', 'QUEUE_CONCURRENCY'] as const;
 
 function loadExistingConfig(configFile: string): Record<string, string> {
   if (!existsSync(configFile)) {
@@ -36,6 +37,7 @@ export function writeConfig(options: ConfigCommandOptions): string {
   if (options.apiEndpoint) mergedConfig.API_ENDPOINT = options.apiEndpoint;
   if (options.apiKey) mergedConfig.API_KEY = options.apiKey;
   if (options.cacheDir !== undefined) mergedConfig.CACHE_DIR = options.cacheDir;
+  if (options.queueConcurrency !== undefined) mergedConfig.QUEUE_CONCURRENCY = options.queueConcurrency;
 
   if (options.extensions !== undefined) {
     mergedConfig.FILE_EXTENSION_FILTER = options.extensions

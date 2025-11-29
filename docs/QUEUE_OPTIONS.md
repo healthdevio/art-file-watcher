@@ -3,6 +3,7 @@
 ## 📋 Contexto Atual
 
 O projeto atualmente processa arquivos de forma síncrona quando detectados pelo watcher:
+
 - Cada arquivo é processado imediatamente ao ser detectado
 - Upload é feito diretamente via `ApiClient.uploadFiles()`
 - Não há controle de concorrência ou retry automático
@@ -24,6 +25,7 @@ O projeto atualmente processa arquivos de forma síncrona quando detectados pelo
 **Descrição**: Fila em memória com controle de concorrência, retry e priorização.
 
 **Características**:
+
 - ✅ **Leve** (~15KB)
 - ✅ **Sem dependências externas** (Redis, etc)
 - ✅ **TypeScript nativo**
@@ -34,25 +36,28 @@ O projeto atualmente processa arquivos de forma síncrona quando detectados pelo
 - ✅ **Compatível com CommonJS**
 
 **Prós**:
+
 - Perfeito para filas simples em um único processo
 - Muito simples de integrar
 - Boa performance
 - Ativamente mantido
 
 **Contras**:
+
 - ❌ **Não persistente** - Fila perde-se se a aplicação cair
 - ❌ **Não distribuída** - Não funciona em múltiplas instâncias
 
 **Quando usar**: Para controle de concorrência e retry simples, sem necessidade de persistência.
 
 **Exemplo de uso**:
+
 ```typescript
 import PQueue from 'p-queue';
 
-const queue = new PQueue({ 
+const queue = new PQueue({
   concurrency: 3,
   interval: 1000,
-  intervalCap: 5 
+  intervalCap: 5,
 });
 
 await queue.add(() => uploadFile(filePath));
@@ -69,6 +74,7 @@ await queue.add(() => uploadFile(filePath));
 **Descrição**: Sistema de fila distribuída baseado em Redis.
 
 **Características**:
+
 - ✅ **Persistente** - Sobrevive a reinicializações
 - ✅ **Distribuída** - Múltiplas instâncias podem compartilhar a fila
 - ✅ **Retry avançado** com diferentes estratégias
@@ -78,11 +84,13 @@ await queue.add(() => uploadFile(filePath));
 - ✅ **TypeScript nativo**
 
 **Prós**:
+
 - Muito robusto e escalável
 - Ideal para produção com múltiplas instâncias
 - Boa documentação
 
 **Contras**:
+
 - ❌ **Depende de Redis** - Precisa instalar e configurar Redis
 - ❌ **Mais complexo** - Overhead para casos simples
 - ❌ **Mais pesado** - ~500KB+ com dependências
@@ -100,16 +108,19 @@ await queue.add(() => uploadFile(filePath));
 **Descrição**: Rate limiter com fila integrada.
 
 **Características**:
+
 - ✅ **Rate limiting avançado** (requisições por minuto/hora)
 - ✅ **Cluster mode** (distribuído)
 - ✅ **Priorização**
 - ✅ **Retry automático**
 
 **Prós**:
+
 - Excelente para limitar requisições por tempo
 - Suporta múltiplas estratégias de rate limiting
 
 **Contras**:
+
 - ❌ **Focado em rate limiting** - Não é uma fila "pura"
 - ❌ **Menos recursos** que p-queue para controle simples
 
@@ -126,16 +137,19 @@ await queue.add(() => uploadFile(filePath));
 **Descrição**: Fila assíncrona mínima e rápida.
 
 **Características**:
+
 - ✅ **Muito leve** (~5KB)
 - ✅ **Máxima performance**
 - ✅ **Sem dependências**
 - ✅ **Zero configuração**
 
 **Prós**:
+
 - Mais leve de todas
 - Performance excepcional
 
 **Contras**:
+
 - ❌ **Sem retry automático** - Precisa implementar manualmente
 - ❌ **Sem priorização nativa**
 - ❌ **Muito básico** - Apenas controle de concorrência
@@ -153,13 +167,16 @@ await queue.add(() => uploadFile(filePath));
 **Descrição**: Parte da biblioteca `async` (comum no Node.js).
 
 **Características**:
+
 - ✅ **Familiar** - Muitos já conhecem
 - ✅ **Básico** - Controle de concorrência simples
 
 **Prós**:
+
 - Se já usa `async`, não adiciona dependência
 
 **Contras**:
+
 - ❌ **Sem retry automático**
 - ❌ **Sem priorização**
 - ❌ **API menos moderna**
@@ -177,6 +194,7 @@ await queue.add(() => uploadFile(filePath));
 ### **Opção 1: p-queue** (Recomendado)
 
 **Por quê?**
+
 1. ✅ **Sem overhead** - Não precisa de Redis ou dependências externas
 2. ✅ **Retry automático** - Pode reenviar arquivos que falharam
 3. ✅ **Controle de concorrência** - Limitar uploads simultâneos (ex: 3-5 por vez)
@@ -185,11 +203,13 @@ await queue.add(() => uploadFile(filePath));
 6. ✅ **Leve** - Não adiciona peso significativo ao binário
 
 **Implementação sugerida**:
+
 - Concorrência: 3-5 uploads simultâneos
 - Retry: 3 tentativas com backoff exponencial
 - Prioridade: Alta para arquivos novos, baixa para retry
 
 **Limitação conhecida**: Se a aplicação cair, a fila em memória é perdida. Porém, como você já tem:
+
 - ✅ Cache de arquivos processados
 - ✅ Varredura inicial ao reiniciar
 - ✅ Processamento de arquivos novos automaticamente
@@ -201,6 +221,7 @@ A fila em memória é suficiente, pois arquivos não processados serão detectad
 ### **Opção 2: BullMQ** (Se precisar de persistência)
 
 **Use apenas se**:
+
 - Precisar processar arquivos mesmo após queda da aplicação
 - Tiver múltiplas instâncias do watcher rodando
 - Quiser monitorar a fila via interface web
@@ -249,25 +270,30 @@ A fila em memória é suficiente, pois arquivos não processados serão detectad
 ## 🔧 Melhores Práticas
 
 ### 1. **Controle de Concorrência**
+
 - Limitar a 3-5 uploads simultâneos para não sobrecarregar API
 - Considerar rate limiting se a API tiver limites
 
 ### 2. **Retry Strategy**
+
 - Máximo 3 tentativas
 - Backoff exponencial (1s, 2s, 4s)
 - Diferentes prioridades para retry vs novos arquivos
 
 ### 3. **Tratamento de Erros**
+
 - Erros de rede: retry automático
 - Erros 4xx (bad request): não retry, apenas log
 - Erros 5xx (server error): retry
 
 ### 4. **Monitoramento**
+
 - Log de itens na fila
 - Log de taxa de sucesso/falha
 - Alertas para fila crescendo muito
 
 ### 5. **Graceful Shutdown**
+
 - Aguardar fila terminar antes de encerrar
 - Salvar estado pendente (se usar fila persistente)
 
@@ -275,21 +301,22 @@ A fila em memória é suficiente, pois arquivos não processados serão detectad
 
 ## 📊 Comparação Rápida
 
-| Biblioteca  | Tamanho | Redis? | Retry? | Prioridade? | Complexidade |
-|------------|---------|--------|--------|-------------|--------------|
-| **p-queue** | 15KB    | ❌     | ✅     | ✅          | ⭐⭐         |
-| **BullMQ**  | 500KB+  | ✅     | ✅     | ✅          | ⭐⭐⭐⭐      |
-| **bottleneck** | 50KB  | ❌*    | ✅     | ✅          | ⭐⭐⭐        |
-| **fastq**   | 5KB     | ❌     | ❌     | ❌          | ⭐           |
-| **async.queue** | -    | ❌     | ❌     | ❌          | ⭐           |
+| Biblioteca      | Tamanho | Redis? | Retry? | Prioridade? | Complexidade |
+| --------------- | ------- | ------ | ------ | ----------- | ------------ |
+| **p-queue**     | 15KB    | ❌     | ✅     | ✅          | ⭐⭐         |
+| **BullMQ**      | 500KB+  | ✅     | ✅     | ✅          | ⭐⭐⭐⭐     |
+| **bottleneck**  | 50KB    | ❌\*   | ✅     | ✅          | ⭐⭐⭐       |
+| **fastq**       | 5KB     | ❌     | ❌     | ❌          | ⭐           |
+| **async.queue** | -       | ❌     | ❌     | ❌          | ⭐           |
 
-*Cluster mode requer Redis, modo standalone não
+\*Cluster mode requer Redis, modo standalone não
 
 ---
 
 ## 🎯 Decisão Final Sugerida
 
 **Usar `p-queue`** porque:
+
 1. ✅ Atende todos os requisitos (concorrência, retry, priorização)
 2. ✅ Não adiciona dependências externas pesadas
 3. ✅ Compatível com arquitetura atual
@@ -297,10 +324,10 @@ A fila em memória é suficiente, pois arquivos não processados serão detectad
 5. ✅ Cache + varredura inicial compensam a falta de persistência
 
 **Instalação**:
+
 ```bash
 npm install p-queue
 npm install --save-dev @types/p-queue
 ```
 
 Quer que eu implemente a fila usando `p-queue`?
-

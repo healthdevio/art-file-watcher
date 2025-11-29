@@ -81,14 +81,21 @@ export function ensureDirectories(
  *
  * @param watchDir - Diretório a ser monitorado (deve existir)
  * @param logDir - Diretório de logs (pode ser criado se não existir)
+ * @param cacheDir - Diretório de cache (opcional, pode ser criado se não existir)
  * @returns true se todos os diretórios estão prontos
  */
-export function validateApplicationDirectories(watchDir: string, logDir: string): boolean {
+export function validateApplicationDirectories(watchDir: string, logDir: string, cacheDir?: string): boolean {
   const logger = safeLogger();
-  const results = ensureDirectories([
+  const directories = [
     { path: watchDir, createIfNotExists: false }, // Diretório de watch deve existir
     { path: logDir, createIfNotExists: true }, // Diretório de logs pode ser criado
-  ]);
+  ];
+
+  if (cacheDir) {
+    directories.push({ path: cacheDir, createIfNotExists: true }); // Diretório de cache pode ser criado
+  }
+
+  const results = ensureDirectories(directories);
 
   let allValid = true;
 

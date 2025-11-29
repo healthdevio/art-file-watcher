@@ -1,5 +1,6 @@
 // validação das variáveis de ambiente
 import { z } from 'zod';
+import { normalizeNumber } from '../utils/number';
 
 const environmentSchema = z.object({
   WATCH_DIR: z.string().min(1, 'WATCH_DIR não pode estar vazio'),
@@ -8,6 +9,11 @@ const environmentSchema = z.object({
   LOG_DIR: z.string().min(1, 'LOG_DIR não pode estar vazio'),
   CACHE_DIR: z.string().optional(),
   FILE_EXTENSION_FILTER: z.string().optional(),
+  QUEUE_CONCURRENCY: z
+    .string()
+    .optional()
+    .transform(val => normalizeNumber(val, 3))
+    .pipe(z.number().int().min(1).max(20)),
 });
 
 export type Environment = z.infer<typeof environmentSchema>;
@@ -39,6 +45,9 @@ Por favor, verifique o arquivo .env na raiz do projeto e configure:
   API_ENDPOINT=<URL do endpoint da API>
   API_KEY=<chave de autenticação da API>
   LOG_DIR=<diretório para armazenar logs>
+  FILE_EXTENSION_FILTER=<extensões separadas por vírgula, ex: .txt,.log> (opcional)
+  CACHE_DIR=<diretório para armazenar o cache> (opcional)
+  QUEUE_CONCURRENCY=<número de uploads simultâneos, padrão: 3> (opcional)
       `.trim();
 
       console.error(errorMessage);

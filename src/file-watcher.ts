@@ -4,15 +4,15 @@ import { environment } from './config/environment';
 import { APP_VERSION } from './config/version';
 import { ApiClient } from './services/api-client';
 import { FileWatcherService } from './services/file-watcher-service';
+import { UploadQueue } from './services/upload-queue';
 import { validateApplicationDirectories } from './utils/directory';
 import { initLogger, safeLogger } from './utils/logger';
 
-/**
- * Inicializa e inicia a aplicação File Watcher
- */
+/** Inicia a aplicação */
 export async function runFileWatcher(): Promise<void> {
   try {
-    const { WATCH_DIR, API_ENDPOINT, API_KEY, LOG_DIR, FILE_EXTENSION_FILTER } = environment;
+    const { WATCH_DIR, API_ENDPOINT, API_KEY, LOG_DIR, FILE_EXTENSION_FILTER, CACHE_DIR, QUEUE_CONCURRENCY } =
+      environment;
     const logger = initLogger(LOG_DIR);
 
     logger.info(`=== File Watcher Service v${APP_VERSION} ===`);
@@ -20,27 +20,28 @@ export async function runFileWatcher(): Promise<void> {
     logger.info(`Diretório de monitoramento: ${WATCH_DIR}`);
     logger.info(`Endpoint da API: ${API_ENDPOINT}`);
     logger.info(`Diretório de logs: ${LOG_DIR}`);
+    logger.info(`Diretório de cache: ${CACHE_DIR || 'não configurado (usando padrão: ./cache)'}`);
+    logger.info(`Concorrência da fila: ${QUEUE_CONCURRENCY}`);
     logger.info('Verificando diretórios...');
 
     const filterValue = FILE_EXTENSION_FILTER?.trim();
     const extensionLabel = filterValue || 'nenhum (todos os arquivos)';
     logger.info(`Filtro de extensões configurado: ${extensionLabel}`);
 
-    const directoriesValid = validateApplicationDirectories(WATCH_DIR, LOG_DIR);
+    const directoriesValid = validateApplicationDirectories(WATCH_DIR, LOG_DIR, CACHE_DIR);
 
     if (!directoriesValid) {
       logger.error('Falha na validação dos diretórios. Encerrando aplicação.');
       process.exit(1);
     }
 
-    const apiClient = new ApiClient({
-      endpoint: API_ENDPOINT,
-      apiKey: API_KEY,
-    });
+    const apiClient = new ApiClient({ endpoint: API_ENDPOINT, apiKey: API_KEY });
+    const uploadQueue = new UploadQueue({ concurrency: QUEUE_CONCURRENCY, apiClient });
 
     const fileWatcherService = new FileWatcherService({
       watchDir: WATCH_DIR,
       apiClient,
+      uploadQueue,
       extensionFilter: FILE_EXTENSION_FILTER,
     });
 

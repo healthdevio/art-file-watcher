@@ -16,6 +16,7 @@ program
   .option('--api-key <key>', 'Chave de autenticação da API')
   .option('--extensions <list>', 'Filtro de extensões separados por vírgula (ex: .ret,.txt)')
   .option('--cache-dir <path>', 'Diretório para cache de arquivos processados')
+  .option('--queue-concurrency <number>', 'Número de uploads simultâneos (padrão: 3)', '3')
   .option('--config-file <path>', 'Caminho do arquivo de configuração', '.env')
   .action((options: ConfigCommandOptions) => {
     try {

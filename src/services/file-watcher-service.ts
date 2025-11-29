@@ -5,6 +5,7 @@ import { readCache, writeCache } from '../utils/cache';
 import { getLogger } from '../utils/logger';
 import { ApiClient } from './api-client';
 import { generateFileHash } from './file-hash';
+import { UploadQueue } from './upload-queue';
 
 /**
  * Configuração do File Watcher
@@ -12,6 +13,7 @@ import { generateFileHash } from './file-hash';
 export interface FileWatcherConfig {
   watchDir: string;
   apiClient: ApiClient;
+  uploadQueue: UploadQueue;
   extensionFilter?: string;
 }
 
@@ -21,12 +23,14 @@ export interface FileWatcherConfig {
 export class FileWatcherService {
   private readonly watcher: FSWatcher;
   private readonly apiClient: ApiClient;
+  private readonly uploadQueue: UploadQueue;
   private readonly logger = getLogger();
   private readonly extensionFilters: string[];
   private readonly watchDir: string;
 
   constructor(config: FileWatcherConfig) {
     this.apiClient = config.apiClient;
+    this.uploadQueue = config.uploadQueue;
     this.extensionFilters = this.normalizeExtensions(config.extensionFilter);
     const extensionLabel = this.extensionFilters.join(', ') || 'nenhum (todos)';
     this.logger.info(`[INFO] Filtro de extensões ativo: ${extensionLabel}`);
@@ -118,22 +122,20 @@ export class FileWatcherService {
         return;
       }
 
-      // Envia o hash para a API
-      const apiResponse = await this.apiClient.uploadFiles([{ filePath, hashResult }]);
-
-      if (apiResponse.success) {
-        await writeCache({
-          hash: hashResult.fileHash,
-          filePath,
-          processedAt: new Date().toISOString(),
-          size: stats.size,
-          modifiedAt: stats.mtimeMs,
-        });
-
-        this.logger.info(`[SUCCESS] ${apiResponse?.message}. Status: ${apiResponse?.statusCode}`);
-      } else {
-        this.logger.error(`[ERROR] ${apiResponse?.message}`);
-      }
+      // Enfileira o arquivo para upload com callback para escrever no cache após sucesso
+      await this.uploadQueue.enqueue({
+        filePath,
+        hashResult,
+        onSuccess: async (processedFilePath: string, processedHash: string) => {
+          await writeCache({
+            hash: processedHash,
+            filePath: processedFilePath,
+            processedAt: new Date().toISOString(),
+            size: stats.size,
+            modifiedAt: stats.mtimeMs,
+          });
+        },
+      });
     } catch (error) {
       console.error(error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
@@ -162,6 +164,11 @@ export class FileWatcherService {
   async stop(): Promise<void> {
     this.logger.info('[INFO] Encerrando o monitoramento...');
     await this.watcher.close();
+
+    // Aguarda a fila terminar todos os uploads pendentes
+    this.logger.info('[INFO] Aguardando uploads pendentes terminarem...');
+    await this.uploadQueue.stop();
+
     this.logger.info('[INFO] Monitoramento encerrado');
   }
 
