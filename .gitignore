@@ -13,3 +13,8 @@ docs/arquivos**
 docs/cursor
 
 .env
+
+# Testes
+coverage
+.test-temp
+*.test-temp

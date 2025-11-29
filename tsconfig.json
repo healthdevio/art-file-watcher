@@ -13,8 +13,8 @@
     "skipLibCheck": true /* Pula a verificação de tipo dos arquivos de definição de biblioteca. */,
     "forceConsistentCasingInFileNames": true /* Garante que o uso de maiúsculas e minúsculas nos nomes de arquivos seja consistente. */
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "scripts/**/*.mjs"],
+  "include": ["src/**/*.ts", "__tests__/**/*.ts"],
+  "exclude": ["node_modules", "scripts/**/*.mjs", "dist", "bin", "coverage"],
   "ts-node": {
     "esm": true
   }
