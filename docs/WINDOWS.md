@@ -1,4 +1,4 @@
-# Guia de Teste no Windows
+# Guia de Instalação no Windows
 
 ## Pré-requisitos
 
@@ -56,13 +56,9 @@ New-Item -ItemType Directory -Path ".\volumes\logs" -Force
 
 1. Abra o PowerShell ou CMD
 2. Navegue até a pasta do executável:
-   ```powershell
-   cd C:\Users\dell\projects\s4s\mutua\file-watcher
-   ```
+   `cd C:\Users\dell\projects\s4s\mutua\file-watcher`
 3. Execute o aplicativo:
-   ```powershell
-   .\art-w.exe
-   ```
+   `.\art-w.exe`
 
 ### Opção C: Pelo Terminal do VS Code
 
@@ -161,7 +157,4 @@ Os logs estão disponíveis em `LOG_DIR` conforme configurado no `.env`.
 ## Notas Importantes
 
 ⚠️ **O arquivo `.env` deve estar na mesma pasta do executável**
-
 ⚠️ **Não feche a janela do console enquanto o aplicativo estiver rodando**
-
-⚠️ **Use caminhos absolutos se tiver problemas com caminhos relativos**

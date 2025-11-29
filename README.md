@@ -1,96 +1,100 @@
-# file-watcher
+# art-file-watcher
 
-## Configuração do File Watcher como Serviço systemd
+Monitor de arquivos de retorno de convênios ART.
+O Objetivo dessa aplicação é monitorar o diretório de entrada de arquivos de retorno de convênios ART e enviar os arquivos para o endpoint da API.
 
-Utilizar o systemd é a forma mais robusta de garantir que seu aplicativo Node.js empacotado (file-watcher) rode de forma contínua, com alta disponibilidade e que inicie automaticamente após qualquer reinicialização do servidor Linux.
+## Como funciona?
 
-### 1. Pré-requisitos e Estrutura de Arquivos
+A Aplicação monitora um diretório de entrada que deve ser configurado em uma variável de ambiente `WATCH_DIR`.
+A cada arquivo adiciona ou alterado no diretório de entrada, a aplicação gera um hash do arquivo e envia para o endpoint da API. O Endpoint da API deve ser configurado em uma variável de ambiente `API_ENDPOINT`.
+Após o envio com sucesso do arquivo, a aplicação salva o hash do arquivo em um diretório de cache, que também pode ser configurado em uma variável de ambiente `CACHE_DIR`.
 
-- Gerar o binário executável para Linux usando o pkg (ou nexe).
-- Criar o arquivo .env com as variáveis de ambiente.
-- Criar o usuário do sistema dedicado ao serviço.
-- Criar o diretório para o binário e a configuração.
-- Criar o arquivo file-watcher.service no diretório de configuração do sistema.
+Para forçar o reenvio dos arquivos, basta deletar os arquivos do diretório de cache.
 
-### 2. Criação do Unit File (.service)
+O Endpoint que recebe o arquivo é do projeto backend `modulo-prestacao-de-art-backend`, que por sua vez começa a processar o arquivo imediatamente.
 
-O arquivo de serviço (Unit File) diz ao systemd como executar e gerenciar seu aplicativo. Crie o arquivo file-watcher.service no diretório de configuração do sistema:
+No momento atual o endpoint que recebe o arquivo de retorno é:
 
-/etc/systemd/system/file-watcher.service
+**HMG:**
+
+- POST: `https://gestao-art-hmg-back.mutua.com.br/watcher-extraction/upload`
+
+**PROD**:
+
+- POST: `https://gestao-art-back.mutua.com.br/watcher-extraction/upload`
+
+### Variáveis de Ambiente Necessárias
+
+- `WATCH_DIR`: Diretório a ser monitorado.
+- `API_ENDPOINT`: Endpoint da API.
+- `API_KEY`: Chave de autenticação da API.
+- `LOG_DIR`: Diretório de logs.
+- `CACHE_DIR`: Diretório de cache.
+- `QUEUE_CONCURRENCY`: Número de uploads simultâneos.
+
+### Regras de comportamento
+
+- Fila de uploads: [docs/QUEUE.md](./docs/QUEUE.md)
+
+## Instalação
+
+A aplicação funciona no modo standalone, ou seja, não precisa ser instalado como um serviço. Porém para garantir que a aplicação rode de forma contínua, com alta disponibilidade e que inicie automaticamente após qualquer reinicialização do servidor Linux, é **recomendado instalar** como um serviço.
+
+- Instalação no Windows: [Guia de Teste no Windows](./docs/WINDOWS.md)
+- Instalação no Linux: [Guia de Instalação no Linux](./docs/LINUX.md)
+
+---
+
+## Para Desenvolvedores
+
+**Stack utilizada:**
+
+- Node.js 20.x
+- TypeScript
+- Chokidar
+- Commander
+- P-queue
+- pkg
+
+O projeto gera um binário executável para Windows e Linux, utilizando o `pkg`.
+
+**scripts:**
+
+- `npm run pkg:windows`: Gera o binário executável para Windows.
+- `npm run pkg:linux`: Gera o binário executável para Linux.
+- `npm run dev`: Inicia o servidor em modo de desenvolvimento.
+
+### Comandos para configuração
+
+Utilize as flags de configuração para gerar o arquivo .env com as variáveis de ambiente necessárias.
+
+Comando de configuração: `npm run config <flags>`
+
+| Flag                  | Descrição                                                 |
+| --------------------- | --------------------------------------------------------- |
+| `--watch-dir`         | Diretório a ser monitorado                                |
+| `--log-dir`           | Diretório onde os logs serão gravados                     |
+| `--api-endpoint`      | Endpoint da API                                           |
+| `--api-key`           | Chave de autenticação da API                              |
+| `--extensions`        | Filtro de extensões separados por vírgula (ex: .ret,.txt) |
+| `--cache-dir`         | Diretório para cache de arquivos processados              |
+| `--queue-concurrency` | Número de uploads simultâneos (padrão: 3)                 |
+
+Exemplo de uso em modo de desenvolvimento: `npm run dev -- config --watch-dir ./volumes/input --log-dir ./volumes/logs --api-endpoint https://api.example.com --api-key 1234567890 --extensions .ret,.txt --cache-dir ./volumes/cache --queue-concurrency 3`
+
+Exemplo de uso em produção (binário): `./art-w config --watch-dir ./volumes/input --log-dir ./volumes/logs --api-endpoint https://api.example.com --api-key 1234567890 --extensions .ret,.txt --cache-dir ./volumes/cache --queue-concurrency 3`
+
+**Estrutura de diretórios:**
 
 ```text/plain
-[Unit]
-Description=File Watcher Service (Node.js/chokidar)
-After=network.target
+src/
+├── commands/
+├── config/
+├── services/
+├── utils/
+├── file-watcher.ts
+├── index.ts
+├── package.json
+├── package-lock.json
 
-[Service]
-# Tipo de serviço simples, o processo principal é a própria aplicação
-Type=simple
-
-# Usuário e Grupo com os quais o serviço será executado (RECOMENDADO)
-# Troque 'watcher' pelo usuário que você criar para o serviço.
-User=watcher
-Group=watcher
-
-# Diretório de trabalho onde o binário deve carregar o arquivo .env
-WorkingDirectory=/etc/file-watcher
-
-# Comando de execução: aponta para o binário. 
-# Garanta que o caminho esteja correto!
-ExecStart=/usr/local/bin/file-watcher
-
-# Garante que a aplicação será reiniciada se ela falhar (com um delay opcional)
-Restart=always
-RestartSec=5s
-
-# Configura as variáveis de ambiente a partir do arquivo .env
-# O seu código 'import 'dotenv/config'' garante que ele será lido.
-
-# Limites de recursos (opcional, para estabilidade)
-LimitNOFILE=65536
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-# Define em qual "fase" do boot o serviço deve ser ativado
-WantedBy=multi-user.target
 ```
-
-### 3. Comandos de Instalação e Gerenciamento
-
-Após salvar o arquivo file-watcher.service, execute os seguintes comandos no terminal com privilégios de root (ou sudo):
-
-Passo 3.1: Criar Usuário e Diretórios (Se ainda não existirem)
-
-a) Cria o diretório para o binário e a configuração
-  `sudo mkdir -p /etc/file-watcher`
-b) Cria o usuário do sistema dedicado ao serviço
-  `sudo useradd -r -s /bin/false watcher`
-
-c) Garante que o usuário 'watcher' possa ler o arquivo .env
-  `sudo chown -R watcher:watcher /etc/file-watcher`
-
-
-Passo 3.2: Recarregar, Habilitar e Iniciar o Serviço
-
-1. Recarrega o systemd para reconhecer o novo arquivo .service
-  `sudo systemctl daemon-reload`
-
-2. Habilita o serviço. Isso garante que ele inicie no próximo boot.
-  `sudo systemctl enable file-watcher.service`
-
-3. Inicia o serviço imediatamente
-  `sudo systemctl start file-watcher.service`
-
-### Verificação e Monitoramento
-
-Use estes comandos para verificar o status e ver os logs:
-
-| Comando | Descrição | 
-|---------|-----------|
-| `sudo systemctl status file-watcher` | Mostra o status atual (ativo/inativo) e as últimas linhas de log. |
-| `journalctl -u file-watcher -f` | Abre um stream contínuo (tail) dos logs do serviço (substitui o console.log e console.error). |
-| `sudo systemctl stop file-watcher` | Para o serviço. |
-| `sudo systemctl restart file-watcher` | Reinicia o serviço (necessário após qualquer alteração no binário ou no .env). |
-
-
