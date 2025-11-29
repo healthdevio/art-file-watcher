@@ -10,5 +10,6 @@ cache/*
 
 docs/**/*.zip
 docs/arquivos**
+docs/cursor
 
 .env

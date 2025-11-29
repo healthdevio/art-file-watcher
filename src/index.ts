@@ -39,11 +39,6 @@ program
     });
   });
 
-if (process.argv.length > 2) {
-  program.parse(process.argv);
-} else {
-  runFileWatcher().catch(error => {
-    console.error(error instanceof Error ? error.message : 'Erro inesperado ao iniciar');
-    process.exit(1);
-  });
-}
+// Sempre usa o commander para processar argumentos
+// O comando 'start' é o padrão (isDefault: true), então executará automaticamente
+program.parse(process.argv);

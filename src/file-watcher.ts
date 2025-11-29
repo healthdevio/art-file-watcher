@@ -96,12 +96,5 @@ function setupGracefulShutdown(fileWatcherService: FileWatcherService): void {
   });
 }
 
-// Inicia a aplicação
-if (require.main === module) {
-  runFileWatcher().catch((error: unknown) => {
-    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-    const logger = safeLogger();
-    logger.error(`[FATAL ERROR] Erro fatal: ${errorMessage}`);
-    process.exit(1);
-  });
-}
+// Removido: A inicialização agora é feita apenas através do src/index.ts
+// para evitar execução duplicada

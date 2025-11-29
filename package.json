@@ -13,9 +13,9 @@
     "dev": "npm run generate-version && tsx watch src/index.ts",
     "bindir": "node scripts/create-bin-dir.mjs",
     "build": "tsc",
-    "pkg:linux": "npm run build && npm run bindir && PKG_DISABLE_BYTECODE=1 pkg --targets node18-linux-x64 --output ./bin/art-w dist/index.js",
-    "pkg:windows": "npm run build && npm run bindir && cross-env PKG_DISABLE_BYTECODE=1 pkg --targets node18-win-x64 --output ./bin/art-w.exe dist/index.js",
-    "pkg:windows:verbose": "npm run build && npm run bindir && pkg --targets node18-win-x64 --output ./bin/art-w.exe dist/index.js",
+    "bundle": "node scripts/bundle.mjs",
+    "pkg:linux": "npm run generate-version && npm run bundle && npm run bindir && PKG_DISABLE_BYTECODE=1 pkg --targets node18-linux-x64 --output ./bin/art-w dist/bundle.js",
+    "pkg:windows": "npm run generate-version && npm run bundle && npm run bindir && pkg --targets node18-win-x64 --output ./bin/art-w.exe dist/bundle.js",
     "prebuild": "npm run generate-version && rimraf dist",
     "generate-version": "node scripts/write-version.mjs",
     "release": "npx standard-version --no-verify --release-as patch -a"
@@ -35,6 +35,8 @@
     "@types/chokidar": "^2.1.7",
     "@types/node": "^20.19.25",
     "@typescript-eslint/eslint-plugin": "^8.48.0",
+    "cross-env": "^10.1.0",
+    "esbuild": "^0.27.0",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
@@ -47,7 +49,7 @@
     "typescript-eslint": "^8.48.0"
   },
   "pkg": {
-    "scripts": "dist/index.js",
+    "scripts": "dist/bundle.js",
     "assets": [
       "node_modules/chokidar/**/*"
     ]
