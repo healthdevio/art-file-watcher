@@ -1,25 +1,12 @@
-import { existsSync, mkdirSync, rmSync } from 'fs';
+import { existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { ensureDirectories, ensureDirectory } from '../../src/utils/directory';
+import { TEST_DIRS } from '../setup';
 
-// Diretório temporário para testes
-const TEST_DIR = join(__dirname, '../../.test-temp');
+// Usa subdiretório específico para este teste
+const TEST_DIR = join(TEST_DIRS.BASE, 'directory-test');
 
 describe('ensureDirectory', () => {
-  beforeEach(() => {
-    // Limpa o diretório de teste antes de cada teste
-    if (existsSync(TEST_DIR)) {
-      rmSync(TEST_DIR, { recursive: true, force: true });
-    }
-  });
-
-  afterAll(() => {
-    // Limpa o diretório de teste após todos os testes
-    if (existsSync(TEST_DIR)) {
-      rmSync(TEST_DIR, { recursive: true, force: true });
-    }
-  });
-
   it('deve criar um diretório se ele não existir e createIfNotExists for true', () => {
     const dirPath = join(TEST_DIR, 'new-dir');
     const result = ensureDirectory(dirPath, true);
@@ -60,25 +47,13 @@ describe('ensureDirectory', () => {
     const result = ensureDirectory(dirPath, true);
 
     expect(result.path).toBeTruthy();
-    expect(result.path).not.toContain('..'); // Não deve conter caminhos relativos
+    expect(result.path).not.toContain('..');
     // No Windows, caminho absoluto começa com letra (C:\), no Linux com /
-    expect(result.path).toMatch(/^([A-Z]:|\/)/); // Verifica se é absoluto
+    expect(result.path).toMatch(/^([A-Z]:|\/)/);
   });
 });
 
 describe('ensureDirectories', () => {
-  beforeEach(() => {
-    if (existsSync(TEST_DIR)) {
-      rmSync(TEST_DIR, { recursive: true, force: true });
-    }
-  });
-
-  afterAll(() => {
-    if (existsSync(TEST_DIR)) {
-      rmSync(TEST_DIR, { recursive: true, force: true });
-    }
-  });
-
   it('deve criar múltiplos diretórios', () => {
     const dirs = [
       { path: join(TEST_DIR, 'dir1'), createIfNotExists: true },
@@ -98,22 +73,23 @@ describe('ensureDirectories', () => {
   });
 
   it('deve processar diretórios com configurações diferentes', () => {
-    mkdirSync(join(TEST_DIR, 'existing'), { recursive: true });
+    const existingDir = join(TEST_DIR, 'existing');
+    mkdirSync(existingDir, { recursive: true });
 
     const dirs = [
-      { path: join(TEST_DIR, 'existing'), createIfNotExists: false },
+      { path: existingDir, createIfNotExists: false },
       { path: join(TEST_DIR, 'new'), createIfNotExists: true },
     ];
 
     const results = ensureDirectories(dirs);
 
-    expect(results[0].success).toBe(true); // Existente
-    expect(results[1].success).toBe(true); // Criado
+    expect(results[0].success).toBe(true);
+    expect(results[1].success).toBe(true);
   });
 
   it('deve usar true como padrão para createIfNotExists', () => {
     const dirPath = join(TEST_DIR, 'default-create');
-    const dirs = [{ path: dirPath }]; // Sem createIfNotExists especificado
+    const dirs = [{ path: dirPath }];
 
     const results = ensureDirectories(dirs);
 

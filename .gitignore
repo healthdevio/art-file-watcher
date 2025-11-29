@@ -1,7 +1,9 @@
 node_modules
 
 dist
-volumes
+volumes/cache
+volumes/logs
+volumes/input
 
 bin/**/cache/*
 bin/**/logs/*
@@ -16,5 +18,5 @@ docs/cursor
 
 # Testes
 coverage
-.test-temp
-*.test-temp
+volumes/.test-temp
+volumes/.test-temp/**
