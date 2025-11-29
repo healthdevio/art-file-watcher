@@ -43,7 +43,7 @@ export class UploadQueue {
       this.logger.debug('[QUEUE] Fila vazia, todos os uploads concluídos');
     });
 
-    this.logger.info(`[QUEUE] Fila inicializada com concorrência de ${config.concurrency}`);
+    this.logger.debug(`Fila inicializada (concorrência: ${config.concurrency})`);
   }
 
   /**
@@ -70,7 +70,7 @@ export class UploadQueue {
       const apiResponse = await this.apiClient.uploadFiles([item]);
 
       if (apiResponse.success) {
-        this.logger.info(`[QUEUE] Upload concluído: ${item.hashResult.fileName}`);
+        this.logger.debug(`Upload OK: ${item.hashResult.fileName}`);
 
         // Chama callback de sucesso se fornecido (ex: escrever no cache)
         if (item.onSuccess) {
@@ -123,7 +123,7 @@ export class UploadQueue {
   private scheduleRetry(item: QueueItem, currentRetry: number): void {
     const delay = this.calculateRetryDelay(currentRetry);
     const delaySeconds = delay / 1000;
-    this.logger.info(`[QUEUE] Agendando retry em ${delaySeconds}s (${delay}ms) para ${item.hashResult.fileName}`);
+    this.logger.warn(`Retry em ${delaySeconds}s: ${item.hashResult.fileName}`);
 
     const task = schedule(() => {
       this.scheduledRetries.delete(task);
@@ -170,7 +170,7 @@ export class UploadQueue {
   clear(): void {
     this.queue.clear();
     this.cancelAllScheduledRetries();
-    this.logger.info('[QUEUE] Fila limpa');
+    this.logger.debug('Fila limpa');
   }
 
   private cancelAllScheduledRetries(): void {
@@ -183,9 +183,9 @@ export class UploadQueue {
   }
 
   async stop(): Promise<void> {
-    this.logger.info('[QUEUE] Parando fila, aguardando uploads pendentes...');
     this.cancelAllScheduledRetries();
+    this.logger.debug('Aguardando fila terminar...');
     await this.queue.onIdle();
-    this.logger.info('[QUEUE] Fila parada');
+    this.logger.debug('Fila parada');
   }
 }

@@ -14,6 +14,7 @@ const environmentSchema = z.object({
     .optional()
     .transform(val => normalizeNumber(val, 3))
     .pipe(z.number().int().min(1).max(20)),
+  LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional().default('info'),
 });
 
 export type Environment = z.infer<typeof environmentSchema>;
@@ -48,6 +49,7 @@ Por favor, verifique o arquivo .env na raiz do projeto e configure:
   FILE_EXTENSION_FILTER=<extensões separadas por vírgula, ex: .txt,.log> (opcional)
   CACHE_DIR=<diretório para armazenar o cache> (opcional)
   QUEUE_CONCURRENCY=<número de uploads simultâneos, padrão: 3> (opcional)
+  LOG_LEVEL=<nível de log: debug|info|warn|error, padrão: info> (opcional)
       `.trim();
 
       console.error(errorMessage);

@@ -13,8 +13,9 @@
     "dev": "npm run generate-version && tsx watch src/index.ts",
     "bindir": "node scripts/create-bin-dir.mjs",
     "build": "tsc",
-    "pkg:linux": "npm run build && npm run bindir && pkg --targets node18-linux-x64 --output ./bin/art-w dist/index.js",
-    "pkg:windows": "npm run build && npm run bindir && pkg --targets node18-win-x64 --output ./bin/art-w.exe dist/index.js",
+    "pkg:linux": "npm run build && npm run bindir && PKG_DISABLE_BYTECODE=1 pkg --targets node18-linux-x64 --output ./bin/art-w dist/index.js",
+    "pkg:windows": "npm run build && npm run bindir && cross-env PKG_DISABLE_BYTECODE=1 pkg --targets node18-win-x64 --output ./bin/art-w.exe dist/index.js",
+    "pkg:windows:verbose": "npm run build && npm run bindir && pkg --targets node18-win-x64 --output ./bin/art-w.exe dist/index.js",
     "prebuild": "npm run generate-version && rimraf dist",
     "generate-version": "node scripts/write-version.mjs",
     "release": "npx standard-version --no-verify --release-as patch -a"

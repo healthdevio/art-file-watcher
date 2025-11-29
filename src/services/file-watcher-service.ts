@@ -22,18 +22,16 @@ export interface FileWatcherConfig {
  */
 export class FileWatcherService {
   private readonly watcher: FSWatcher;
-  private readonly apiClient: ApiClient;
   private readonly uploadQueue: UploadQueue;
   private readonly logger = getLogger();
   private readonly extensionFilters: string[];
   private readonly watchDir: string;
 
   constructor(config: FileWatcherConfig) {
-    this.apiClient = config.apiClient;
     this.uploadQueue = config.uploadQueue;
     this.extensionFilters = this.normalizeExtensions(config.extensionFilter);
     const extensionLabel = this.extensionFilters.join(', ') || 'nenhum (todos)';
-    this.logger.info(`[INFO] Filtro de extensões ativo: ${extensionLabel}`);
+    this.logger.debug(`Filtro de extensões: ${extensionLabel}`);
     this.watchDir = config.watchDir;
 
     // Configuração do chokidar
@@ -68,7 +66,7 @@ export class FileWatcherService {
     });
 
     this.watcher.on('ready', () => {
-      this.logger.info('Monitoramento iniciado com sucesso. Aguardando novos arquivos...');
+      this.logger.info('Monitoramento iniciado');
     });
   }
 
@@ -104,16 +102,13 @@ export class FileWatcherService {
       const stats = await stat(filePath);
 
       if (!this.shouldProcessFile(filePath)) {
-        this.logger.info(`Arquivo ignorado pelo filtro de extensões: ${filePath}`);
+        this.logger.debug(`Arquivo ignorado pelo filtro: ${filePath}`);
         return;
       }
 
-      this.logger.info(`Arquivo detectado: ${filePath}`);
+      this.logger.debug(`Processando: ${filePath}`);
 
-      // Gera o hash do arquivo
       const hashResult = await generateFileHash(filePath);
-
-      this.logger.info(`Hash Gerado (SHA256): ${hashResult.fileHash}`);
 
       const cached = await readCache(hashResult.fileHash);
 
@@ -140,7 +135,6 @@ export class FileWatcherService {
       console.error(error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
 
-      // Trata erros específicos
       if (errorMessage.includes('não encontrado ou removido')) {
         this.logger.warn(`[WARN] ${errorMessage}`);
         return;
@@ -150,26 +144,18 @@ export class FileWatcherService {
     }
   }
 
-  /**
-   * Inicia o monitoramento de arquivos
-   */
+  /** Inicia o monitoramento de arquivos */
   start(): void {
     // O watcher já foi iniciado no construtor, mas podemos adicionar lógica adicional aqui se necessário
-    this.logger.info('File Watcher Service iniciado');
+    // Serviço já iniciado no construtor
   }
 
-  /**
-   * Para o monitoramento e fecha o watcher
-   */
+  /** Para o monitoramento e fecha o watcher */
   async stop(): Promise<void> {
-    this.logger.info('[INFO] Encerrando o monitoramento...');
+    this.logger.info('Encerrando monitoramento...');
     await this.watcher.close();
-
-    // Aguarda a fila terminar todos os uploads pendentes
-    this.logger.info('[INFO] Aguardando uploads pendentes terminarem...');
     await this.uploadQueue.stop();
-
-    this.logger.info('[INFO] Monitoramento encerrado');
+    this.logger.info('Monitoramento encerrado');
   }
 
   private shouldProcessFile(filePath: string): boolean {

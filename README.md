@@ -29,8 +29,9 @@ No momento atual o endpoint que recebe o arquivo de retorno é:
 - `API_ENDPOINT`: Endpoint da API.
 - `API_KEY`: Chave de autenticação da API.
 - `LOG_DIR`: Diretório de logs.
-- `CACHE_DIR`: Diretório de cache.
-- `QUEUE_CONCURRENCY`: Número de uploads simultâneos.
+- `CACHE_DIR`: Diretório de cache (opcional).
+- `QUEUE_CONCURRENCY`: Número de uploads simultâneos (opcional, padrão: 3).
+- `LOG_LEVEL`: Nível de log para console - `debug`, `info`, `warn` ou `error` (opcional, padrão: `info`).
 
 ### Regras de comportamento
 

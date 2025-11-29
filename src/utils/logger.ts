@@ -6,34 +6,49 @@ import DailyRotateFile from 'winston-daily-rotate-file';
 let loggerInstance: WinstonLogger;
 
 const levelIcons: Record<string, string> = {
-  info: '🛈',
+  debug: '🔍',
+  info: '¡',
   warn: '⚠',
   error: '✖',
-  success: '✔',
-  hash: '🔐',
 };
 
+/**
+ * Formato simplificado para console - apenas mensagens essenciais
+ */
 const consoleFormat = format.combine(
   format.colorize({ all: true }),
-  format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+  format.timestamp({ format: 'HH:mm:ss' }), // Apenas hora:minuto:segundo
   format.printf(({ timestamp, level, message }) => {
-    const icon = levelIcons[level.toLowerCase()] ?? '▸';
-    return `${timestamp} ${icon} ${level} › ${message}`;
+    const icon = levelIcons[level.toLowerCase()] ?? '•';
+    const msg = message ? `${message}` : '';
+    const cleanMessage = msg.replace(/\[(INFO|ERROR|WARN|QUEUE)\]/g, '').trim();
+    return `${timestamp} ${icon} ${cleanMessage}`;
   }),
 );
 
+/**
+ * Formato completo para arquivo - apenas erros
+ */
 const fileFormat = format.combine(
   format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-  format.printf(({ timestamp, level, message }) => `${timestamp} [${level.toUpperCase()}] ${message}`),
+  format.errors({ stack: true }), // Inclui stack trace para erros
+  format.printf(({ timestamp, level, message, stack }) => {
+    if (stack) {
+      return `${timestamp} [${level.toUpperCase()}] ${message}\n${stack}`;
+    }
+    return `${timestamp} [${level.toUpperCase()}] ${message}`;
+  }),
 );
 
 /**
- * Inicializa o logger Winston com rotação.
+ * Inicializa o logger Winston com níveis diferentes para console e arquivo.
+ * - Console: nível configurável via LOG_LEVEL (padrão: info)
+ * - Arquivo: apenas errors (para reduzir volume de logs)
  *
  * @param logDir O diretório onde os arquivos de log serão criados.
- * @param level Nível mínimo de log (padrão: info)
+ * @param consoleLevel Nível de log para o console (padrão: info, pode ser 'debug', 'info', 'warn', 'error')
  */
-export function initLogger(logDir: string, level: string = 'info'): WinstonLogger {
+export function initLogger(logDir: string, consoleLevel: string = 'info'): WinstonLogger {
   if (loggerInstance) {
     return loggerInstance;
   }
@@ -44,21 +59,32 @@ export function initLogger(logDir: string, level: string = 'info'): WinstonLogge
     mkdirSync(absoluteLogDir, { recursive: true });
   }
 
-  const rotateTransport = new DailyRotateFile({
+  // Valida e normaliza o nível de log
+  const validLevels = ['debug', 'info', 'warn', 'error'];
+  const normalizedLevel = validLevels.includes(consoleLevel.toLowerCase()) ? consoleLevel.toLowerCase() : 'info';
+
+  // Arquivo de log: APENAS erros
+  const fileTransport = new DailyRotateFile({
     dirname: absoluteLogDir,
     filename: 'file-watcher-%DATE%.log',
     datePattern: 'YYYY-MM-DD',
     zippedArchive: true,
     maxSize: '20m',
-    maxFiles: '14d',
-    level,
+    maxFiles: '30d', // Mantém 30 dias de logs de erro
+    level: 'error', // Apenas erros no arquivo
     format: fileFormat,
   });
 
+  // Console: nível configurável (permite debug quando necessário)
+  const consoleTransport = new transports.Console({
+    level: normalizedLevel,
+    format: consoleFormat,
+  });
+
   loggerInstance = createLogger({
-    level,
-    format: fileFormat,
-    transports: [new transports.Console({ format: consoleFormat }), rotateTransport],
+    level: normalizedLevel, // Nível mínimo geral
+    format: format.simple(),
+    transports: [consoleTransport, fileTransport],
     exitOnError: false,
   });
 

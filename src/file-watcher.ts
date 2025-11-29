@@ -11,22 +11,27 @@ import { initLogger, safeLogger } from './utils/logger';
 /** Inicia a aplicação */
 export async function runFileWatcher(): Promise<void> {
   try {
-    const { WATCH_DIR, API_ENDPOINT, API_KEY, LOG_DIR, FILE_EXTENSION_FILTER, CACHE_DIR, QUEUE_CONCURRENCY } =
-      environment;
-    const logger = initLogger(LOG_DIR);
+    const {
+      WATCH_DIR,
+      API_ENDPOINT,
+      API_KEY,
+      LOG_DIR,
+      FILE_EXTENSION_FILTER,
+      CACHE_DIR,
+      QUEUE_CONCURRENCY,
+      LOG_LEVEL,
+    } = environment;
+    const logger = initLogger(LOG_DIR, LOG_LEVEL);
 
-    logger.info(`=== File Watcher Service v${APP_VERSION} ===`);
-    logger.info('Variáveis de ambiente validadas');
-    logger.info(`Diretório de monitoramento: ${WATCH_DIR}`);
-    logger.info(`Endpoint da API: ${API_ENDPOINT}`);
-    logger.info(`Diretório de logs: ${LOG_DIR}`);
-    logger.info(`Diretório de cache: ${CACHE_DIR || 'não configurado (usando padrão: ./cache)'}`);
-    logger.info(`Concorrência da fila: ${QUEUE_CONCURRENCY}`);
-    logger.info('Verificando diretórios...');
+    logger.info(`File Watcher v${APP_VERSION} iniciado`);
+    logger.debug(`Monitorando: ${WATCH_DIR}`);
+    logger.debug(`API: ${API_ENDPOINT}`);
+    logger.debug(`Logs: ${LOG_DIR}`);
+    if (CACHE_DIR) logger.debug(`Cache: ${CACHE_DIR}`);
+    logger.debug(`Concorrência: ${QUEUE_CONCURRENCY}`);
 
     const filterValue = FILE_EXTENSION_FILTER?.trim();
-    const extensionLabel = filterValue || 'nenhum (todos os arquivos)';
-    logger.info(`Filtro de extensões configurado: ${extensionLabel}`);
+    if (filterValue) logger.debug(`Extensões: ${filterValue}`);
 
     const directoriesValid = validateApplicationDirectories(WATCH_DIR, LOG_DIR, CACHE_DIR);
 
