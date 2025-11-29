@@ -25,6 +25,36 @@ describe('Cache Utils', () => {
     cacheModule = await import('../../src/utils/cache');
   });
 
+  describe('CACHE_BASE fallback', () => {
+    it('deve usar cache padrão quando CACHE_DIR não está definido', async () => {
+      // Reseta módulos e remove CACHE_DIR temporariamente
+      const originalCacheDir = process.env.CACHE_DIR;
+      delete process.env.CACHE_DIR;
+      
+      jest.resetModules();
+      const cacheModuleNoDir = await import('../../src/utils/cache');
+      
+      // Testa que ainda funciona com o fallback
+      const entry: CacheEntry = {
+        hash: 'fallback-test',
+        filePath: '/path/to/file.txt',
+        processedAt: '2024-01-01T00:00:00.000Z',
+        size: 1024,
+        modifiedAt: 1704067200000,
+      };
+      
+      await cacheModuleNoDir.writeCache(entry);
+      const result = await cacheModuleNoDir.readCache('fallback-test');
+      
+      expect(result).not.toBeNull();
+      expect(result?.hash).toBe('fallback-test');
+      
+      // Restaura
+      process.env.CACHE_DIR = originalCacheDir;
+      jest.resetModules();
+    });
+  });
+
   beforeEach(async () => {
     // Limpa apenas o conteúdo do cache, não o diretório
     try {
@@ -106,6 +136,22 @@ describe('Cache Utils', () => {
 
       expect(result).not.toBeNull();
       expect(result?.hash).toBe('a');
+    });
+
+    it('deve usar bucket baseado nos primeiros 2 caracteres do hash', async () => {
+      const entry: CacheEntry = {
+        hash: 'x', // Apenas 1 caractere
+        filePath: '/path/to/file.txt',
+        processedAt: '2024-01-01T00:00:00.000Z',
+        size: 1024,
+        modifiedAt: 1704067200000,
+      };
+
+      await cacheModule.writeCache(entry);
+      const result = await cacheModule.readCache('x');
+
+      expect(result).not.toBeNull();
+      expect(result?.hash).toBe('x');
     });
   });
 

@@ -75,10 +75,13 @@ describe('Logger Utils', () => {
     });
 
     it('deve lançar erro se o logger não foi inicializado', () => {
-      // Como resetamos os módulos, precisamos garantir que está inicializado
-      initLogger('volumes/.test-temp/logs');
-      const logger = getLogger();
-      expect(logger).toBeDefined();
+      // Reseta o módulo para garantir que o logger não está inicializado
+      jest.resetModules();
+      const { getLogger: getLoggerFresh } = require('../../src/utils/logger');
+
+      expect(() => {
+        getLoggerFresh();
+      }).toThrow('Logger ainda não inicializado');
     });
 
     it('deve retornar a mesma instância que initLogger retornou', () => {
@@ -101,12 +104,19 @@ describe('Logger Utils', () => {
     });
 
     it('deve retornar um logger fallback se não inicializado', () => {
-      const logger = safeLogger();
+      // Reseta módulos para garantir que o logger não está inicializado
+      jest.resetModules();
+      const { safeLogger: safeLoggerFresh } = require('../../src/utils/logger');
+      const logger = safeLoggerFresh();
 
       expect(logger).toBeDefined();
       expect(typeof logger.info).toBe('function');
       expect(typeof logger.error).toBe('function');
       expect(typeof logger.warn).toBe('function');
+      // Deve ser o logger fallback (console)
+      expect(logger.info).toBe(console.log);
+      expect(logger.error).toBe(console.error);
+      expect(logger.warn).toBe(console.warn);
     });
 
     it('deve permitir chamar métodos de log', () => {
@@ -162,6 +172,25 @@ describe('Logger Utils', () => {
       }).not.toThrow();
 
       consoleSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('deve incluir stack trace quando houver erro com stack', () => {
+      const logger = initLogger('volumes/.test-temp/logs-stack', 'error');
+      
+      // Cria um erro com stack
+      const error = new Error('Teste de erro com stack');
+      error.stack = 'Error: Teste de erro com stack\n    at test.js:1:1\n    at Object.<anonymous>';
+
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      
+      // Loga o erro - isso deve incluir o stack trace no formato de arquivo
+      logger.error('Erro de teste', error);
+      
+      expect(() => {
+        logger.error('Teste', error);
+      }).not.toThrow();
+      
       consoleErrorSpy.mockRestore();
     });
   });

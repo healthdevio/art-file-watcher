@@ -79,5 +79,39 @@ describe('System Utils', () => {
       // Verifica estrutura básica
       expect(userAgent).toMatch(/^art-w\/[^\s]+\s+\([^)]+\)\s+\+s4sbr\.com$/);
     });
+
+    it('deve funcionar mesmo se os.version() retornar undefined', () => {
+      // Mock para testar caso onde os.version() retorna undefined
+      const originalVersion = os.version;
+      const originalRelease = os.release;
+      
+      // Simula undefined
+      jest.spyOn(os, 'version').mockReturnValueOnce(undefined as unknown as string);
+      jest.spyOn(os, 'release').mockReturnValueOnce(undefined as unknown as string);
+      
+      const userAgent = makeUserAgent();
+      
+      // Deve ainda retornar uma string válida
+      expect(userAgent).toBeTruthy();
+      expect(userAgent).toContain('art-w/');
+      expect(userAgent).toContain('+s4sbr.com');
+      
+      // Restaura mocks
+      jest.restoreAllMocks();
+    });
+
+    it('deve funcionar mesmo se APP_VERSION.split retornar undefined', () => {
+      // Testa caso onde APP_VERSION pode não ter split válido
+      const originalVersion = APP_VERSION;
+      
+      const userAgent = makeUserAgent();
+      
+      // Deve ainda retornar uma string válida
+      expect(userAgent).toBeTruthy();
+      expect(userAgent).toContain('art-w/');
+      
+      // Restaura
+      jest.restoreAllMocks();
+    });
   });
 });
