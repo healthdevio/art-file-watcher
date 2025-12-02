@@ -65,6 +65,22 @@ O projeto gera um binário executável para Windows e Linux, utilizando o `pkg`.
 - `npm run pkg:linux`: Gera o binário executável para Linux.
 - `npm run dev`: Inicia o servidor em modo de desenvolvimento.
 
+### Release
+
+**Workflows:**
+
+- `release.yml`: Realiza o build e cria uma release com os binários.
+- `test.yml`: Executa os testes e cobertura de código.
+
+Para realizar o release, basta criar uma tag no formato `v<major>.<minor>.<patch>`.
+
+1. Crie um novo release `npm run release`
+2. Submeta o release para o GitHub `git push --tags`
+
+As actions do GitHub irão buildar o projeto e criar uma release com os binários.
+
+---
+
 ### Comandos para configuração
 
 Utilize as flags de configuração para gerar o arquivo .env com as variáveis de ambiente necessárias.
