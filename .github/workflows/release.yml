@@ -1,0 +1,147 @@
+name: Build and Release Binaries
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  test:
+    name: Run Tests Before Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js 18.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Linting
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+  build:
+    name: Build ${{ matrix.os }}
+    needs: [test]
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            node-target: linux-x64
+            npm_script: pkg:linux
+            artifact_name: art-w
+            binary_path: ./bin/art-w
+          - os: windows-latest
+            node-target: win-x64
+            npm_script: pkg:windows
+            artifact_name: art-w.exe
+            binary_path: ./bin/art-w.exe
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js 18.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
+          cache: 'npm'
+
+      - name: Install dependencies (Including pkg)
+        run: npm ci
+
+      - name: Run pkg build
+        run: npm run ${{ matrix.npm_script }}
+
+      - name: Verify binary exists
+        shell: bash
+        run: |
+          if [ ! -f "${{ matrix.binary_path }}" ]; then
+            echo "❌ Erro: Binário não encontrado em ${{ matrix.binary_path }}"
+            echo "📂 Conteúdo do diretório bin/:"
+            ls -la ./bin/ || dir bin
+            exit 1
+          fi
+          echo "✅ Binário gerado com sucesso: ${{ matrix.binary_path }}"
+          if [[ "${{ runner.os }}" == "Linux" ]]; then
+            ls -lh "${{ matrix.binary_path }}"
+          else
+            dir "${{ matrix.binary_path }}"
+          fi
+
+      - name: Upload Binary Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.binary_path }}
+          retention-days: 7
+          if-no-files-found: error
+
+  create_github_release:
+    name: Create GitHub Release
+    needs: [build]
+    runs-on: ubuntu-latest
+    if: success()
+    steps:
+      - name: Download all built artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+
+      - name: Set Release Information
+        id: release_info
+        run: |
+          TAG_NAME="${{ github.ref_name }}"
+          RELEASE_NAME="Release $TAG_NAME"
+          echo "release_name=$RELEASE_NAME" >> $GITHUB_OUTPUT
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "✅ Release: $RELEASE_NAME"
+          echo "✅ Tag: $TAG_NAME"
+
+      - name: List downloaded artifacts
+        run: |
+          echo "📦 Artefatos baixados:"
+          find release-assets -type f -exec ls -lh {} \; || echo "Nenhum artefato encontrado"
+          echo ""
+          echo "📂 Estrutura de diretórios:"
+          find release-assets -type f
+
+      - name: Create Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+          prerelease: false
+          tag_name: ${{ steps.release_info.outputs.tag_name }}
+          name: ${{ steps.release_info.outputs.release_name }}
+          body: |
+            ## Build Automation
+
+            Binários gerados automaticamente para **${{ steps.release_info.outputs.tag_name }}**.
+
+            ### 📦 Assets Incluídos:
+            - 🐧 Linux (x64): `art-w`
+            - 🪟 Windows (x64): `art-w.exe`
+
+            ### 📋 Instruções:
+            - **Linux**: Baixe o binário `art-w`, defina permissões de execução (`chmod +x art-w`) e configure como serviço `systemd`.
+            - **Windows**: Baixe o binário `art-w.exe` e execute diretamente ou configure como serviço do Windows.
+
+            ---
+            **Build realizado em**: ${{ github.event.head_commit.timestamp || github.run_started_at }}
+
+          files: |
+            release-assets/art-w/*
+            release-assets/art-w.exe/*
