@@ -23,22 +23,16 @@ Este guia cobre a instalação completa do **art-file-watcher** no Linux, desde 
 
 O método mais simples é usar o script de instalação automatizado:
 
-```bash
-# Baixe o script de instalação
-curl -L -o install-linux.sh https://raw.githubusercontent.com/healthdevio/art-file-watcher/main/scripts/install-linux.sh
-
-# Torne o script executável
-chmod +x install-linux.sh
-
-# Execute a instalação (versão mais recente)
-sudo ./install-linux.sh
-
-# Ou instale uma versão específica
-sudo ./install-linux.sh -v v1.0.3
-
-# Ou instale em diretórios customizados
-sudo ./install-linux.sh -d /opt/app -D /var/app-data
-```
+1. Baixe o script de instalação:
+   `curl -L -o install-linux.sh https://raw.githubusercontent.com/healthdevio/art-file-watcher/main/scripts/install-linux.sh`
+2. Torne o script executável:
+   `chmod +x install-linux.sh`
+3. Execute a instalação (versão mais recente):
+   `sudo ./install-linux.sh`
+   Ou instale uma versão específica:
+   `sudo ./install-linux.sh -v v1.0.3`
+   Ou instale em diretórios customizados:
+   `sudo ./install-linux.sh -d /opt/app -D /var/app-data`
 
 **O script automaticamente:**
 
