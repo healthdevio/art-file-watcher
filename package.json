@@ -8,6 +8,11 @@
     "type": "git",
     "url": "https://github.com/healthdevio/art-file-watcher.git"
   },
+  "author": {
+    "name": "Leandro Sbrissa",
+    "email": "leguass7@hotmail.com"
+  },
+  "license": "ISC",
   "scripts": {
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
