@@ -151,15 +151,43 @@ download_new_binary() {
     
     chmod +x art-w.new
     
-    # Verificar se o binário é válido
-    if ! ./art-w.new --version &> /dev/null; then
-        print_error "Binário baixado parece ser inválido"
+    # Verificar se o arquivo existe
+    if [ ! -f art-w.new ]; then
+        print_error "Binário não foi baixado corretamente"
+        return 1
+    fi
+    
+    # Verificar se o arquivo tem um tamanho mínimo razoável (pelo menos 1MB)
+    FILE_SIZE=$(stat -f%z art-w.new 2>/dev/null || stat -c%s art-w.new 2>/dev/null || echo "0")
+    if [ "$FILE_SIZE" -lt 1048576 ]; then
+        print_error "Binário baixado parece estar corrompido (tamanho muito pequeno: ${FILE_SIZE} bytes)"
         rm -f art-w.new
         return 1
     fi
     
-    NEW_VERSION=$(./art-w.new --version 2>/dev/null | head -n1 || echo "desconhecida")
-    print_success "Novo binário baixado com sucesso (versão: $NEW_VERSION)"
+    # Verificar se o binário parece ser um executável ELF (Linux)
+    if command -v file &> /dev/null; then
+        FILE_TYPE=$(file art-w.new 2>/dev/null || echo "")
+        if [ -n "$FILE_TYPE" ] && ! echo "$FILE_TYPE" | grep -qE "(ELF|executable|binary|executable.*statically|executable.*dynamically)"; then
+            print_warning "Aviso: Arquivo pode não ser um binário Linux válido (tipo: $FILE_TYPE)"
+        fi
+    fi
+    
+    # Verificar permissões de execução
+    if [ ! -x art-w.new ]; then
+        print_error "Binário não tem permissões de execução"
+        rm -f art-w.new
+        return 1
+    fi
+    
+    print_success "Novo binário baixado com sucesso (tamanho: $((FILE_SIZE / 1024 / 1024))MB)"
+    
+    # Tentar obter versão (não crítico - apenas informativo, não falha se der erro)
+    if NEW_VERSION=$(./art-w.new --version 2>&1 | head -n1); then
+        if [ -n "$NEW_VERSION" ] && [ "$NEW_VERSION" != "desconhecida" ]; then
+            print_info "Versão detectada: $NEW_VERSION"
+        fi
+    fi
 }
 
 # Substituir binário

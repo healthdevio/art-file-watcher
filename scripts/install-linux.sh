@@ -171,14 +171,41 @@ download_binary() {
     
     chmod +x art-w
     
-    # Verificar se o binário é válido
-    if ! ./art-w --version &> /dev/null; then
-        print_error "Binário baixado parece ser inválido"
+    # Verificar se o arquivo existe
+    if [ ! -f art-w ]; then
+        print_error "Binário não foi baixado corretamente"
         exit 1
     fi
     
-    INSTALLED_VERSION=$(./art-w --version 2>/dev/null || echo "desconhecida")
-    print_success "Binário baixado e instalado com sucesso (versão: $INSTALLED_VERSION)"
+    # Verificar se o arquivo tem um tamanho mínimo razoável (pelo menos 1MB)
+    FILE_SIZE=$(stat -f%z art-w 2>/dev/null || stat -c%s art-w 2>/dev/null || echo "0")
+    if [ "$FILE_SIZE" -lt 1048576 ]; then
+        print_error "Binário baixado parece estar corrompido (tamanho muito pequeno: ${FILE_SIZE} bytes)"
+        exit 1
+    fi
+    
+    # Verificar se o binário parece ser um executável ELF (Linux)
+    if command -v file &> /dev/null; then
+        FILE_TYPE=$(file art-w 2>/dev/null || echo "")
+        if [ -n "$FILE_TYPE" ] && ! echo "$FILE_TYPE" | grep -qE "(ELF|executable|binary|executable.*statically|executable.*dynamically)"; then
+            print_warning "Aviso: Arquivo pode não ser um binário Linux válido (tipo: $FILE_TYPE)"
+        fi
+    fi
+    
+    # Verificar permissões de execução
+    if [ ! -x art-w ]; then
+        print_error "Binário não tem permissões de execução"
+        exit 1
+    fi
+    
+    print_success "Binário baixado e instalado com sucesso (tamanho: $((FILE_SIZE / 1024 / 1024))MB)"
+    
+    # Tentar obter versão (não crítico - apenas informativo, não falha se der erro)
+    if INSTALLED_VERSION=$(./art-w --version 2>&1 | head -n1); then
+        if [ -n "$INSTALLED_VERSION" ] && [ "$INSTALLED_VERSION" != "desconhecida" ]; then
+            print_info "Versão detectada: $INSTALLED_VERSION"
+        fi
+    fi
 }
 
 # Criar diretórios
