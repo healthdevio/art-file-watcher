@@ -3,6 +3,12 @@ name: Tests
 on:
   push:
     branches: [main, develop]
+    paths-ignore:
+      - '.vscode/**'
+      - 'docs/**'
+      - '**/*.md'
+      - 'volumes/**'
+      - '.env.example'
 
 jobs:
   test:
