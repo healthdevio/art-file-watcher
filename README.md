@@ -1,5 +1,8 @@
 # art-file-watcher
 
+[![Tests](https://github.com/healthdevio/art-file-watcher/actions/workflows/test.yml/badge.svg)](https://github.com/healthdevio/art-file-watcher/actions/workflows/test.yml)
+[![Build and Release Binaries](https://github.com/healthdevio/art-file-watcher/actions/workflows/release.yml/badge.svg)](https://github.com/healthdevio/art-file-watcher/actions/workflows/release.yml)
+
 Monitor de arquivos de retorno de convênios ART.
 O Objetivo dessa aplicação é monitorar o diretório de entrada de arquivos de retorno de convênios ART e enviar os arquivos para o endpoint da API.
 
