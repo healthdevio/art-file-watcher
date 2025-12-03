@@ -77,6 +77,45 @@ Por favor, verifique o arquivo .env na raiz do projeto e configure:
   }
 }
 
-const environment = validateEnvironment();
+// Validação lazy - só valida quando acessada pela primeira vez
+let cachedEnvironment: Environment | null = null;
 
-export { environment };
+function getEnvironment(): Environment {
+  if (cachedEnvironment === null) {
+    cachedEnvironment = validateEnvironment();
+  }
+  return cachedEnvironment;
+}
+
+// Exporta como objeto com validação lazy
+// A validação só acontece quando alguma propriedade for acessada
+export const environment: Environment = new Proxy({} as Environment, {
+  get(_target, prop: string | symbol) {
+    if (typeof prop === 'string') {
+      return getEnvironment()[prop as keyof Environment];
+    }
+    return undefined;
+  },
+  has(_target, prop: string | symbol) {
+    if (typeof prop === 'string') {
+      return prop in getEnvironment();
+    }
+    return false;
+  },
+  ownKeys() {
+    return Object.keys(getEnvironment());
+  },
+  getOwnPropertyDescriptor(_target, prop: string | symbol) {
+    if (typeof prop === 'string') {
+      const env = getEnvironment();
+      if (prop in env) {
+        return {
+          enumerable: true,
+          configurable: true,
+          value: env[prop as keyof Environment],
+        };
+      }
+    }
+    return undefined;
+  },
+});

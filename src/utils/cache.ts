@@ -10,11 +10,13 @@ export interface CacheEntry {
   modifiedAt: number;
 }
 
-const CACHE_BASE = environment.CACHE_DIR ? resolve(environment.CACHE_DIR) : join(process.cwd(), 'cache');
+function getCacheBase(): string {
+  return environment.CACHE_DIR ? resolve(environment.CACHE_DIR) : join(process.cwd(), 'cache');
+}
 
 function getCacheFilePath(hash: string): string {
   const bucket = hash.slice(0, 2) || 'xx';
-  return join(CACHE_BASE, bucket, `${hash}.json`);
+  return join(getCacheBase(), bucket, `${hash}.json`);
 }
 
 export async function readCache(hash: string): Promise<CacheEntry | null> {

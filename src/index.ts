@@ -1,6 +1,5 @@
 import { Command } from 'commander';
 import { ConfigCommandOptions, writeConfig } from './commands/config';
-import { runFileWatcher } from './file-watcher';
 import { safeLogger } from './utils/logger';
 
 const program = new Command();
@@ -32,7 +31,9 @@ program
 program
   .command('start', { isDefault: true })
   .description('Inicia o monitoramento de arquivos')
-  .action(() => {
+  .action(async () => {
+    // Importação dinâmica para evitar validação de environment antes do comando config
+    const { runFileWatcher } = await import('./file-watcher');
     runFileWatcher().catch(error => {
       console.error(error instanceof Error ? error.message : 'Erro inesperado ao iniciar');
       process.exit(1);
