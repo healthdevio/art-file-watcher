@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.0.5](https://github.com/healthdevio/art-file-watcher/compare/v1.0.4...v1.0.5) (2025-12-03)
+
+
+### Bug Fixes
+
+* corrige validação de variaveis de ambiente no config ([9295a8e](https://github.com/healthdevio/art-file-watcher/commit/9295a8e9380fa18fc65eaacb152e4fdcf3cc37c3))
+
 ### [1.0.4](https://github.com/healthdevio/art-file-watcher/compare/v1.0.3...v1.0.4) (2025-12-03)
 
 ### [1.0.3](https://github.com/healthdevio/art-file-watcher/compare/v1.0.2...v1.0.3) (2025-12-02)
