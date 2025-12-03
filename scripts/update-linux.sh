@@ -55,16 +55,27 @@ check_permissions() {
 
 # Obter versão mais recente se necessário
 get_latest_version() {
-    if [ "$1" = "latest" ] || [ -z "$1" ]; then
+    local requested_version="$1"
+    
+    if [ "$requested_version" = "latest" ] || [ -z "$requested_version" ]; then
         print_info "Buscando versão mais recente..."
-        VERSION=$(curl -s "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-        if [ -z "$VERSION" ]; then
+        local latest_version=$(curl -s "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+        
+        if [ -z "$latest_version" ]; then
             print_error "Não foi possível obter a versão mais recente"
             exit 1
         fi
+        
+        VERSION="$latest_version"
         print_success "Versão mais recente encontrada: $VERSION"
     else
-        VERSION=$1
+        VERSION="$requested_version"
+    fi
+    
+    # Validar que a versão não está vazia
+    if [ -z "$VERSION" ]; then
+        print_error "Versão não pode estar vazia"
+        exit 1
     fi
 }
 

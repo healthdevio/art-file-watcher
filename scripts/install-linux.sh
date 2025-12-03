@@ -57,11 +57,16 @@ check_permissions() {
 # Detectar distribuição
 detect_distro() {
     if [ -f /etc/os-release ]; then
-        . /etc/os-release
-        DISTRO=$ID
-        DISTRO_VERSION=$VERSION_ID
+        # Carrega apenas as variáveis que precisamos, sem sobrescrever VERSION
+        DISTRO=$(grep "^ID=" /etc/os-release | cut -d= -f2 | tr -d '"')
+        DISTRO_VERSION=$(grep "^VERSION_ID=" /etc/os-release | cut -d= -f2 | tr -d '"')
     else
         print_error "Não foi possível detectar a distribuição Linux"
+        exit 1
+    fi
+    
+    if [ -z "$DISTRO" ] || [ -z "$DISTRO_VERSION" ]; then
+        print_error "Não foi possível detectar informações da distribuição"
         exit 1
     fi
     
@@ -113,16 +118,27 @@ install_dependencies() {
 
 # Obter versão mais recente se necessário
 get_latest_version() {
-    if [ "$1" = "latest" ] || [ -z "$1" ]; then
+    local requested_version="$1"
+    
+    if [ "$requested_version" = "latest" ] || [ -z "$requested_version" ]; then
         print_info "Buscando versão mais recente..."
-        VERSION=$(curl -s "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-        if [ -z "$VERSION" ]; then
+        local latest_version=$(curl -s "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+        
+        if [ -z "$latest_version" ]; then
             print_error "Não foi possível obter a versão mais recente"
             exit 1
         fi
+        
+        VERSION="$latest_version"
         print_success "Versão mais recente encontrada: $VERSION"
     else
-        VERSION=$1
+        VERSION="$requested_version"
+    fi
+    
+    # Validar que a versão não está vazia
+    if [ -z "$VERSION" ]; then
+        print_error "Versão não pode estar vazia"
+        exit 1
     fi
 }
 

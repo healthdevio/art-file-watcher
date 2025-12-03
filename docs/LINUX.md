@@ -13,10 +13,7 @@ Este guia cobre a instalação completa do **art-file-watcher** no Linux, desde 
   - Logs (ex: `/var/art/logs`)
   - Cache (ex: `/var/art/cache`)
 
-> 💡 **Dica**: Este projeto inclui scripts automatizados para facilitar a instalação e atualização:
->
-> - `scripts/install-linux.sh` - Instalação automatizada completa
-> - `scripts/update-linux.sh` - Atualização automatizada com backup
+> 💡 **Dica**: Este projeto inclui scripts automatizados para facilitar a instalação e atualização. Basta baixar os scripts diretamente do GitHub - não é necessário clonar o repositório.
 
 ---
 
@@ -30,23 +27,20 @@ O método mais simples é usar o script de instalação automatizado:
 # Baixe o script de instalação
 curl -L -o install-linux.sh https://raw.githubusercontent.com/healthdevio/art-file-watcher/main/scripts/install-linux.sh
 
-# Ou se você já clonou o repositório:
-cd /caminho/para/art-file-watcher
-
 # Torne o script executável
-chmod +x scripts/install-linux.sh
+chmod +x install-linux.sh
 
 # Execute a instalação (versão mais recente)
-sudo ./scripts/install-linux.sh
+sudo ./install-linux.sh
 
 # Ou instale uma versão específica
-sudo ./scripts/install-linux.sh -v v1.0.3
+sudo ./install-linux.sh -v v1.0.3
 
 # Ou instale em diretórios customizados
-sudo ./scripts/install-linux.sh -d /opt/app -D /var/app-data
+sudo ./install-linux.sh -d /opt/app -D /var/app-data
 ```
 
-O script automaticamente:
+**O script automaticamente:**
 
 - ✅ Detecta a distribuição Linux (Ubuntu/CentOS/RHEL)
 - ✅ Instala dependências necessárias (curl, libstdc++)
@@ -58,7 +52,7 @@ O script automaticamente:
 **Ver opções disponíveis:**
 
 ```bash
-sudo ./scripts/install-linux.sh --help
+sudo ./install-linux.sh --help
 ```
 
 ### Opção 2: Instalação Manual
@@ -322,23 +316,20 @@ O projeto inclui um script de atualização automatizado:
 # Baixe o script de atualização
 curl -L -o update-linux.sh https://raw.githubusercontent.com/healthdevio/art-file-watcher/main/scripts/update-linux.sh
 
-# Ou se você já clonou o repositório:
-cd /caminho/para/art-file-watcher
-
 # Torne o script executável
-chmod +x scripts/update-linux.sh
+chmod +x update-linux.sh
 
 # Atualizar para versão mais recente
-sudo ./scripts/update-linux.sh
+sudo ./update-linux.sh
 
 # Atualizar para versão específica
-sudo ./scripts/update-linux.sh -v v1.0.4
+sudo ./update-linux.sh -v v1.0.4
 
 # Atualizar instalação em diretório customizado
-sudo ./scripts/update-linux.sh -d /opt/app
+sudo ./update-linux.sh -d /opt/app
 ```
 
-O script automaticamente:
+**O script automaticamente:**
 
 - ✅ Verifica a instalação atual
 - ✅ Cria backup do binário atual
@@ -350,7 +341,7 @@ O script automaticamente:
 **Ver opções disponíveis:**
 
 ```bash
-sudo ./scripts/update-linux.sh --help
+sudo ./update-linux.sh --help
 ```
 
 ### Método Manual: Download e Substituição Direta
