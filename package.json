@@ -1,6 +1,6 @@
 {
   "name": "art-file-watcher",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Monitor de arquivos de retorno de convênios ART",
   "main": "dist/index.js",
   "type": "commonjs",
@@ -10,13 +10,13 @@
   },
   "scripts": {
     "start": "node dist/index.js",
-    "dev": "npm run generate-version && tsx watch src/index.ts",
+    "dev": "tsx watch src/index.ts",
     "lint": "eslint src/**/*.ts --fix",
     "bindir": "node scripts/create-bin-dir.mjs",
     "build": "tsc",
     "bundle": "node scripts/bundle.mjs",
-    "pkg:linux": "npm run generate-version && npm run bundle && npm run bindir && PKG_DISABLE_BYTECODE=1 pkg --targets node18-linux-x64 --output ./bin/art-w dist/bundle.js",
-    "pkg:windows": "npm run generate-version && npm run bundle && npm run bindir && pkg --targets node18-win-x64 --output ./bin/art-w.exe dist/bundle.js",
+    "pkg:linux": "npm run bundle && npm run bindir && pkg --targets node18-linux-x64 --output ./bin/art-w dist/bundle.js",
+    "pkg:windows": "npm run bundle && npm run bindir && pkg --targets node18-win-x64 --output ./bin/art-w.exe dist/bundle.js",
     "prebuild": "npm run generate-version && rimraf dist",
     "generate-version": "node scripts/write-version.mjs",
     "release": "npx standard-version --no-verify --release-as patch -a",
@@ -66,6 +66,9 @@
     ]
   },
   "standard-version": {
-    "infile": "docs/CHANGELOG.md"
+    "infile": "docs/CHANGELOG.md",
+    "scripts": {
+      "postbump": "npm run generate-version && git add . && git add -A"
+    }
   }
 }

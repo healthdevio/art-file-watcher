@@ -15,6 +15,19 @@ const environmentSchema = z.object({
     .transform(val => normalizeNumber(val, 3))
     .pipe(z.number().int().min(1).max(20)),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional().default('info'),
+  // Auto-update configurações
+  AUTO_UPDATE_ENABLED: z
+    .string()
+    .optional()
+    .default('false')
+    .transform(val => val === 'true' || val === '1' || val === 'yes'),
+  AUTO_UPDATE_CHECK_INTERVAL_HOURS: z
+    .string()
+    .optional()
+    .transform(val => normalizeNumber(val, 24))
+    .pipe(z.number().int().min(1).max(168)), // Máximo 1 semana
+  AUTO_UPDATE_REPOSITORY: z.string().optional().default('healthdevio/art-file-watcher'),
+  AUTO_UPDATE_SERVICE_NAME: z.string().optional().default('art-file-watcher'), // Nome do serviço systemd/Windows Service
 });
 
 export type Environment = z.infer<typeof environmentSchema>;
@@ -50,6 +63,10 @@ Por favor, verifique o arquivo .env na raiz do projeto e configure:
   CACHE_DIR=<diretório para armazenar o cache> (opcional)
   QUEUE_CONCURRENCY=<número de uploads simultâneos, padrão: 3> (opcional)
   LOG_LEVEL=<nível de log: debug|info|warn|error, padrão: info> (opcional)
+  AUTO_UPDATE_ENABLED=<habilitar auto-update: true|false, padrão: false> (opcional)
+  AUTO_UPDATE_CHECK_INTERVAL_HOURS=<intervalo de verificação em horas, padrão: 24> (opcional)
+  AUTO_UPDATE_REPOSITORY=<repositório GitHub owner/repo, padrão: healthdevio/art-file-watcher> (opcional)
+  AUTO_UPDATE_SERVICE_NAME=<nome do serviço systemd/Windows Service> (opcional)
       `.trim();
 
       console.error(errorMessage);

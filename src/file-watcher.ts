@@ -3,6 +3,7 @@ import 'dotenv/config';
 import { environment } from './config/environment';
 import { APP_VERSION } from './config/version';
 import { ApiClient } from './services/api-client';
+import { AutoUpdate } from './services/auto-update';
 import { FileWatcherService } from './services/file-watcher-service';
 import { UploadQueue } from './services/upload-queue';
 import { validateApplicationDirectories } from './utils/directory';
@@ -10,6 +11,8 @@ import { initLogger, safeLogger } from './utils/logger';
 
 /** Inicia a aplicação */
 export async function runFileWatcher(): Promise<void> {
+  let autoUpdate: AutoUpdate | null = null;
+
   try {
     const {
       WATCH_DIR,
@@ -20,6 +23,10 @@ export async function runFileWatcher(): Promise<void> {
       CACHE_DIR,
       QUEUE_CONCURRENCY,
       LOG_LEVEL,
+      AUTO_UPDATE_ENABLED,
+      AUTO_UPDATE_CHECK_INTERVAL_HOURS,
+      AUTO_UPDATE_REPOSITORY,
+      AUTO_UPDATE_SERVICE_NAME,
     } = environment;
     const logger = initLogger(LOG_DIR, LOG_LEVEL);
 
@@ -52,7 +59,19 @@ export async function runFileWatcher(): Promise<void> {
 
     await fileWatcherService.seedExistingFiles();
     fileWatcherService.start();
-    setupGracefulShutdown(fileWatcherService);
+
+    // Inicializa auto-update se habilitado
+    if (AUTO_UPDATE_ENABLED) {
+      autoUpdate = new AutoUpdate({
+        enabled: true,
+        checkIntervalHours: AUTO_UPDATE_CHECK_INTERVAL_HOURS,
+        repository: AUTO_UPDATE_REPOSITORY,
+        currentVersion: APP_VERSION,
+        serviceName: AUTO_UPDATE_SERVICE_NAME,
+      });
+    }
+
+    setupGracefulShutdown(fileWatcherService, autoUpdate);
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
     const logger = safeLogger();
@@ -65,13 +84,19 @@ export async function runFileWatcher(): Promise<void> {
  * Configura o encerramento gracioso da aplicação
  *
  * @param fileWatcherService - Instância do serviço de file watcher
+ * @param autoUpdate - Instância do serviço de auto-update (opcional)
  */
-function setupGracefulShutdown(fileWatcherService: FileWatcherService): void {
+function setupGracefulShutdown(fileWatcherService: FileWatcherService, autoUpdate: AutoUpdate | null = null): void {
   const logger = safeLogger();
 
   const shutdown = async (signal: string) => {
     logger.info(`Recebido sinal ${signal}. Encerrando graciosamente...`);
     try {
+      // Para o auto-update se estiver ativo
+      if (autoUpdate) {
+        autoUpdate.stop();
+      }
+
       await fileWatcherService.stop();
       logger.info('Aplicação encerrada com sucesso.');
       process.exit(0);
@@ -95,6 +120,3 @@ function setupGracefulShutdown(fileWatcherService: FileWatcherService): void {
     shutdown('unhandledRejection');
   });
 }
-
-// Removido: A inicialização agora é feita apenas através do src/index.ts
-// para evitar execução duplicada

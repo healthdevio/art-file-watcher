@@ -32,6 +32,7 @@ No momento atual o endpoint que recebe o arquivo de retorno é:
 - `CACHE_DIR`: Diretório de cache (opcional).
 - `QUEUE_CONCURRENCY`: Número de uploads simultâneos (opcional, padrão: 3).
 - `LOG_LEVEL`: Nível de log para console - `debug`, `info`, `warn` ou `error` (opcional, padrão: `info`).
+- `AUTO_UPDATE_ENABLED`: Habilita auto-update automático (opcional, padrão: `false`). Ver [documentação completa](./docs/AUTO_UPDATE.md).
 
 ### Regras de comportamento
 
@@ -43,6 +44,17 @@ A aplicação funciona no modo standalone, ou seja, não precisa ser instalado c
 
 - Instalação no Windows: [Guia de Teste no Windows](./docs/WINDOWS.md)
 - Instalação no Linux: [Guia de Instalação no Linux](./docs/LINUX.md)
+
+### Auto-Update
+
+A aplicação possui um sistema de auto-update que verifica e instala automaticamente novas versões do GitHub Releases. Para mais informações, consulte a [documentação completa do Auto-Update](./docs/AUTO_UPDATE.md).
+
+**Configuração rápida:**
+
+```env
+AUTO_UPDATE_ENABLED=true
+AUTO_UPDATE_SERVICE_NAME=art-file-watcher  # Nome do serviço (opcional)
+```
 
 ---
 
