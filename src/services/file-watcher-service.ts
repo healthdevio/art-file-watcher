@@ -15,6 +15,8 @@ export interface FileWatcherConfig {
   apiClient: ApiClient;
   uploadQueue: UploadQueue;
   extensionFilter?: string;
+  usePolling?: boolean;
+  pollingIntervalMs?: number;
 }
 
 /**
@@ -34,16 +36,27 @@ export class FileWatcherService {
     this.logger.debug(`Filtro de extensões: ${extensionLabel}`);
     this.watchDir = config.watchDir;
 
-    // Configuração do chokidar
-    this.watcher = chokidar.watch(config.watchDir, {
+    // Configuração base do chokidar
+    const chokidarOptions: chokidar.WatchOptions = {
       ignored: /(^|[\\/])\../, // Ignora arquivos ocultos (que começam com .)
       persistent: true,
       ignoreInitial: true, // Não processa arquivos que já existem ao iniciar
       awaitWriteFinish: {
         stabilityThreshold: 2000, // Aguarda 2 segundos de estabilidade
-        pollInterval: 100, // Verifica a cada 100ms
+        pollInterval: 300, // Verifica a cada 300ms
       },
-    });
+    };
+
+    // Adiciona configurações de polling se habilitado
+    if (config.usePolling) {
+      const interval = config.pollingIntervalMs ?? 2000;
+      chokidarOptions.usePolling = true;
+      chokidarOptions.interval = interval;
+      chokidarOptions.binaryInterval = interval; // Para comportamento consistente
+      this.logger.debug(`Polling configurado com intervalo de ${interval}ms`);
+    }
+
+    this.watcher = chokidar.watch(config.watchDir, chokidarOptions);
 
     this.setupEventHandlers();
   }
