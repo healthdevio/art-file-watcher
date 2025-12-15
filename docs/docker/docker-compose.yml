@@ -1,0 +1,27 @@
+services:
+  art-file-watcher:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: art-file-watcher
+    environment:
+      - SAMBA_HOST=${SAMBA_HOST-10.128.0.6}
+      - SHARE_NAME=${SHARE_NAME-public}
+
+    # -----------------------------------------------------------------
+    # CONFIGURAÇÕES DE PERMISSÃO CRUCIAIS PARA MONTAGEM INTERNA (CIFS)
+    # -----------------------------------------------------------------
+    # Necessário para que o container possa usar o mount.cifs e o módulo FUSE
+    privileged: true
+    cap_add:
+      - SYS_ADMIN
+      - DAC_READ_SEARCH
+    devices:
+      - /dev/fuse:/dev/fuse
+    # -----------------------------------------------------------------
+
+    restart: "no"
+
+    # Opcional: mantém o container interativo para debug
+    stdin_open: true
+    tty: true

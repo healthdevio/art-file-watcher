@@ -1,10 +1,14 @@
 import { Command } from 'commander';
 import { ConfigCommandOptions, writeConfig } from './commands/config';
+import { APP_VERSION } from './config/version';
 import { safeLogger } from './utils/logger';
 
 const program = new Command();
 
-program.name('file-watcher').description('Monitor de arquivos com hashes SHA256').version('1.0.0');
+program
+  .name('art-file-watcher')
+  .description('Monitor de arquivos com hashes SHA256')
+  .version(APP_VERSION ?? '0.0.0');
 
 program
   .command('config')

@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.0.7](https://github.com/healthdevio/art-file-watcher/compare/v1.0.6...v1.0.7) (2025-12-12)
+
+### [1.0.6](https://github.com/healthdevio/art-file-watcher/compare/v1.0.5...v1.0.6) (2025-12-12)
+
+
+### Features
+
+* **docker:** add Docker setup for art-file-watcher with smbnetfs integration ([ea23c97](https://github.com/healthdevio/art-file-watcher/commit/ea23c97d904a9aca910b3ca28fe8eadaab69cbc9))
+
 ### [1.0.5](https://github.com/healthdevio/art-file-watcher/compare/v1.0.4...v1.0.5) (2025-12-03)
 
 
