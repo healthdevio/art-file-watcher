@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync } from 'fs';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { createLogger, format, transports, type Logger as WinstonLogger } from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 
@@ -53,7 +53,7 @@ export function initLogger(logDir: string, consoleLevel: string = 'info'): Winst
     return loggerInstance;
   }
 
-  const absoluteLogDir = join(process.cwd(), logDir);
+  const absoluteLogDir = logDir ? resolve(logDir) : join(process.cwd(), 'logs'); //join(process.cwd(), logDir);
 
   if (!existsSync(absoluteLogDir)) {
     mkdirSync(absoluteLogDir, { recursive: true });

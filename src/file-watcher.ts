@@ -23,6 +23,8 @@ export async function runFileWatcher(): Promise<void> {
       CACHE_DIR,
       QUEUE_CONCURRENCY,
       LOG_LEVEL,
+      WATCH_POLLING_ENABLED,
+      WATCH_POLLING_INTERVAL_MS,
       AUTO_UPDATE_ENABLED,
       AUTO_UPDATE_CHECK_INTERVAL_HOURS,
       AUTO_UPDATE_REPOSITORY,
@@ -40,6 +42,15 @@ export async function runFileWatcher(): Promise<void> {
     const filterValue = FILE_EXTENSION_FILTER?.trim();
     if (filterValue) logger.debug(`Extensões: ${filterValue}`);
 
+    if (WATCH_POLLING_ENABLED) {
+      logger.info(`Modo polling habilitado (intervalo: ${WATCH_POLLING_INTERVAL_MS}ms)`);
+      logger.warn(
+        'ATENÇÃO: O modo polling pode ter impacto significativo em performance em diretórios com milhares de arquivos. Use apenas quando necessário (ex: compartilhamentos de rede/Samba).',
+      );
+    } else {
+      logger.debug('Modo polling desabilitado (usando eventos do sistema de arquivos)');
+    }
+
     const directoriesValid = validateApplicationDirectories(WATCH_DIR, LOG_DIR, CACHE_DIR);
 
     if (!directoriesValid) {
@@ -55,6 +66,8 @@ export async function runFileWatcher(): Promise<void> {
       apiClient,
       uploadQueue,
       extensionFilter: FILE_EXTENSION_FILTER,
+      usePolling: WATCH_POLLING_ENABLED,
+      pollingIntervalMs: WATCH_POLLING_INTERVAL_MS,
     });
 
     await fileWatcherService.seedExistingFiles();
