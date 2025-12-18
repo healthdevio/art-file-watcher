@@ -129,7 +129,6 @@ deploy:staging:
   stage: deploy
   environment:
     name: staging
-    url: https://controladoria-hmg-back.mutua.com.br
   image: docker:24.0.5
   services:
     - docker:24.0.5-dind
@@ -140,7 +139,6 @@ deploy:staging:
     TAG: 'latest'
     WEBHOOK_URL: 'https://portainer-hmg.mutua.com.br/api/webhooks/9b32e5fa-bb5c-4263-94b8-d40be1f5967c'
     IMAGE_NAME: 'registry.mutua.com.br/mutua360/$PROJECT_NAME'
-    ENDPOINT_URL: 'http://dckr03.mutua.com.br:5000'
 
   <<: *minio_setup
   script:
@@ -163,7 +161,6 @@ deploy:production:
   stage: deploy
   environment:
     name: production
-    url: https://controladoria-back.mutua.com.br
   image: docker:24.0.5
   services:
     - docker:24.0.5-dind
@@ -174,7 +171,6 @@ deploy:production:
     TAG: 'stable'
     WEBHOOK_URL: 'https://portainer.mutua.com.br/api/webhooks/b78143fd-825f-4995-9a33-e103bbc726c4'
     IMAGE_NAME: 'registry.mutua.com.br/mutua360/$PROJECT_NAME'
-    ENDPOINT_URL: 'http://dckr03.mutua.com.br:5000'
 
   <<: *minio_setup
   script:
