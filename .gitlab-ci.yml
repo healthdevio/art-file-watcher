@@ -10,7 +10,6 @@
 stages:
   - setup
   - lint
-  - test
   - build
   - deploy
 
@@ -65,17 +64,19 @@ prepare_cache:
     - mc alias set minio http://$MINIO_ENDPOINT:$MINIO_PORT $MINIO_ACCESS_KEY $MINIO_SECRET_KEY
 
 # ===========================================
-# STAGE: LINT
+# STAGE: LINT (executa lint e test em paralelo)
 # ===========================================
 lint:
   stage: lint
   image: node:lts-alpine
+  dependencies:
+    - prepare_cache
   script:
-    - echo "Instalando dependências do cache"
+    - echo "Instalando dependências do cache..."
     - npm ci --cache .npm --prefer-offline
-    - echo "🚓 Executando análise de código"
-    - npm run ci:lint
-    - echo "Lint executado com sucesso!"
+    - echo "🚓 Executando análise de código..."
+    - npx eslint src/**/*.ts
+    - echo "✅ Lint executado com sucesso!"
   cache:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
@@ -84,17 +85,24 @@ lint:
     policy: pull
   allow_failure: false
 
-# test:e2e:
-#   stage: test
-#   image: node:lts-alpine
-#   dependencies:
-#     - prepare
-#   before_script:
-#     - echo "Executando testes end-to-end..."
-#   script:
-#     - npm run test:e2e
-#     - echo "Testes e2e executados com sucesso!"
-#   allow_failure: false
+test:
+  stage: lint
+  image: node:lts-alpine
+  dependencies:
+    - prepare_cache
+  script:
+    - echo "Instalando dependências do cache..."
+    - npm ci --cache .npm --prefer-offline
+    - echo "🧪 Executando testes unitários..."
+    - npm test
+    - echo "✅ Testes executados com sucesso!"
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - .npm/
+      - node_modules/
+    policy: pull
+  allow_failure: false
 
 # ===========================================
 # STAGE: BUILD
@@ -104,16 +112,27 @@ build:
   image: node:lts-alpine
   dependencies:
     - prepare_cache
+    - lint
+    - test
   before_script:
     - echo "Instalando dependências do cache..."
     - npm ci --cache .npm --prefer-offline
     # - echo "Configurando arquivo de ambiente para build..."
     # - cp .env.homologation .env
   script:
+    - echo "🔨 Executando build TypeScript..."
     - npm run build
+    - echo "📦 Gerando binário Linux..."
+    - npm run pkg:linux
     - echo "Verificando arquivos gerados..."
     - ls -la dist/
-    - echo "Build executado com sucesso!"
+    - ls -la bin/
+    - echo "✅ Build executado com sucesso!"
+  artifacts:
+    paths:
+      - bin/
+      - dist/
+    expire_in: 1 hour
   cache:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
@@ -132,6 +151,8 @@ deploy:staging:
   image: docker:24.0.5
   services:
     - docker:24.0.5-dind
+  dependencies:
+    - build
   variables:
     DOCKER_HOST: 'unix:///runner/services/docker/docker.sock'
     DOCKER_TLS_CERTDIR: '/certs'
@@ -145,6 +166,10 @@ deploy:staging:
     - export PROJECT_NAME="${PROJECT_NAME}"
     - echo "PROJECT_NAME ${PROJECT_NAME}, TAG ${TAG}, IMAGE_NAME ${IMAGE_NAME} - $IMAGE_NAME:$TAG"
     - echo "🚀 Iniciando deploy para $PROJECT_NAME $ENVIRONMENT - $REGISTRY_USER $REGISTRY_HOST"
+    - echo "📦 Verificando binário gerado..."
+    - ls -la bin/
+    - test -f bin/art-w || (echo "❌ Binário bin/art-w não encontrado!" && exit 1)
+    - echo "✅ Binário encontrado!"
     - docker login -u ${REGISTRY_USER} -p ${REGISTRY_PASSWORD} ${REGISTRY_HOST}
     - echo "🐳 Construindo imagem Docker ($IMAGE_NAME:$TAG)"
     - docker build --platform linux/amd64 -t "$IMAGE_NAME:$TAG" .
@@ -164,6 +189,8 @@ deploy:production:
   image: docker:24.0.5
   services:
     - docker:24.0.5-dind
+  dependencies:
+    - build
   variables:
     DOCKER_HOST: 'unix:///runner/services/docker/docker.sock'
     DOCKER_TLS_CERTDIR: '/certs'
@@ -177,6 +204,10 @@ deploy:production:
     - export PROJECT_NAME="${PROJECT_NAME}"
     - echo "PROJECT_NAME ${PROJECT_NAME}, TAG ${TAG}, IMAGE_NAME ${IMAGE_NAME} - $IMAGE_NAME:$TAG"
     - echo "🚀 Iniciando deploy para $PROJECT_NAME $ENVIRONMENT - $REGISTRY_USER $REGISTRY_HOST"
+    - echo "📦 Verificando binário gerado..."
+    - ls -la bin/
+    - test -f bin/art-w || (echo "❌ Binário bin/art-w não encontrado!" && exit 1)
+    - echo "✅ Binário encontrado!"
     - docker login -u ${REGISTRY_USER} -p ${REGISTRY_PASSWORD} ${REGISTRY_HOST}
     - echo "🐳 Construindo imagem Docker ($IMAGE_NAME:$TAG)"
     - docker build --platform linux/amd64 -t "$IMAGE_NAME:$TAG" .
