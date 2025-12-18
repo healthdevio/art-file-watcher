@@ -15,6 +15,17 @@ const environmentSchema = z.object({
     .transform(val => normalizeNumber(val, 3))
     .pipe(z.number().int().min(1).max(20)),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional().default('info'),
+  // Polling configurações
+  WATCH_POLLING_ENABLED: z
+    .string()
+    .optional()
+    .default('false')
+    .transform(val => val === 'true' || val === '1' || val === 'yes'),
+  WATCH_POLLING_INTERVAL_MS: z
+    .string()
+    .optional()
+    .transform(val => normalizeNumber(val, 2000))
+    .pipe(z.number().int().min(500).max(60000)), // Entre 500ms e 60s
   // Auto-update configurações
   AUTO_UPDATE_ENABLED: z
     .string()
@@ -63,6 +74,8 @@ Por favor, verifique o arquivo .env na raiz do projeto e configure:
   CACHE_DIR=<diretório para armazenar o cache> (opcional)
   QUEUE_CONCURRENCY=<número de uploads simultâneos, padrão: 3> (opcional)
   LOG_LEVEL=<nível de log: debug|info|warn|error, padrão: info> (opcional)
+  WATCH_POLLING_ENABLED=<habilitar modo polling: true|false, padrão: false> (opcional)
+  WATCH_POLLING_INTERVAL_MS=<intervalo de polling em ms, padrão: 2000, min: 500, max: 60000> (opcional)
   AUTO_UPDATE_ENABLED=<habilitar auto-update: true|false, padrão: false> (opcional)
   AUTO_UPDATE_CHECK_INTERVAL_HOURS=<intervalo de verificação em horas, padrão: 24> (opcional)
   AUTO_UPDATE_REPOSITORY=<repositório GitHub owner/repo, padrão: healthdevio/art-file-watcher> (opcional)

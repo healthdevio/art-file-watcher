@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.0.9](https://github.com/healthdevio/art-file-watcher/compare/v1.0.8...v1.0.9) (2025-12-15)
+
+
+### Bug Fixes
+
+* caminho do dir de logs ([db0e163](https://github.com/healthdevio/art-file-watcher/commit/db0e16358b4df441ec95f3c14ba11f5e39becbad))
+
+### [1.0.8](https://github.com/healthdevio/art-file-watcher/compare/v1.0.7...v1.0.8) (2025-12-15)
+
+
+### Features
+
+* adiciona modo polling ([ab31944](https://github.com/healthdevio/art-file-watcher/commit/ab3194458d2607061ecad9984e851d9e44e821fe))
+
+### [1.0.7](https://github.com/healthdevio/art-file-watcher/compare/v1.0.6...v1.0.7) (2025-12-12)
+
 ### [1.0.6](https://github.com/healthdevio/art-file-watcher/compare/v1.0.5...v1.0.6) (2025-12-12)
 
 

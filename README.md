@@ -35,7 +35,33 @@ No momento atual o endpoint que recebe o arquivo de retorno é:
 - `CACHE_DIR`: Diretório de cache (opcional).
 - `QUEUE_CONCURRENCY`: Número de uploads simultâneos (opcional, padrão: 3).
 - `LOG_LEVEL`: Nível de log para console - `debug`, `info`, `warn` ou `error` (opcional, padrão: `info`).
+- `WATCH_POLLING_ENABLED`: Habilita modo polling para monitoramento de arquivos (opcional, padrão: `false`). Veja [Configuração de Polling](#configuração-de-polling) abaixo.
+- `WATCH_POLLING_INTERVAL_MS`: Intervalo de polling em milissegundos (opcional, padrão: `2000`, mínimo: `500`, máximo: `60000`). Apenas usado quando `WATCH_POLLING_ENABLED=true`.
 - `AUTO_UPDATE_ENABLED`: Habilita auto-update automático (opcional, padrão: `false`). Ver [documentação completa](./docs/AUTO_UPDATE.md).
+
+### Configuração de Polling
+
+Por padrão, a aplicação usa eventos do sistema de arquivos (inotify no Linux, FSEvents no macOS, ReadDirectoryChangesW no Windows) para monitorar mudanças, oferecendo melhor performance e menor uso de recursos.
+
+O modo polling pode ser habilitado quando:
+
+- O sistema de arquivos não suporta eventos nativos adequadamente
+- Monitoramento de compartilhamentos de rede (Samba, NFS, etc.)
+- Sistemas de arquivos remotos ou virtuais
+
+**⚠️ Atenção:** O modo polling verifica periodicamente o diretório, o que pode ter impacto significativo em performance em diretórios com milhares de arquivos. Use apenas quando necessário.
+
+**Configuração recomendada para diretórios grandes:**
+
+- Mantenha `WATCH_POLLING_INTERVAL_MS` ≥ 2000ms (padrão) para reduzir carga de CPU/IO
+- Valores menores (500-1000ms) podem ser usados em diretórios pequenos, mas aumentam o uso de recursos
+
+**Exemplo de configuração:**
+
+```env
+WATCH_POLLING_ENABLED=true
+WATCH_POLLING_INTERVAL_MS=2000
+```
 
 ### Regras de comportamento
 
