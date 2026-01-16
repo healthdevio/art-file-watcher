@@ -142,6 +142,60 @@ Exemplo de uso em modo de desenvolvimento: `npm run dev -- config --watch-dir ./
 
 Exemplo de uso em produção (binário): `./art-w config --watch-dir ./volumes/input --log-dir ./volumes/logs --api-endpoint https://api.example.com --api-key 1234567890 --extensions .ret,.txt --cache-dir ./volumes/cache --queue-concurrency 3`
 
+### Comando para processar arquivo específico
+
+O comando `process` permite processar um arquivo específico sem iniciar o monitoramento de diretório. Útil para processar arquivos individuais sob demanda ou para testes.
+
+**Características:**
+
+- Processa um único arquivo e encerra após conclusão
+- Gera hash SHA256 do arquivo
+- Loga informações completas do arquivo (nome, caminho, tamanho, data de modificação, hash)
+- Envia o arquivo para a API configurada
+- **Não adiciona ao cache** (diferente do comportamento do monitoramento contínuo)
+- Processa qualquer arquivo, independente do filtro de extensões configurado
+
+**Sintaxe:**
+
+```bash
+art-w process --file <caminho-do-arquivo>
+```
+
+**Exemplos:**
+
+Modo de desenvolvimento:
+
+```bash
+npm run dev -- process --file ./volumes/test/TEST_.ret
+```
+
+Modo de produção (binário):
+
+```bash
+./art-w process --file ./volumes/test/TEST_.ret
+```
+
+**Saída esperada:**
+
+```text
+Processando arquivo específico: ./volumes/test/TEST_.ret
+=== Informações do Arquivo ===
+Nome: TEST_.ret
+Caminho: /caminho/completo/para/TEST_.ret
+Tamanho: 3920304 bytes
+Data de Modificação: 2026-01-16T16:05:27.703Z
+Hash SHA256: 0d00777455155a6ce109e21ce0e7c42d2ded5a3ec0b911a09e9e388cf375f330
+================================
+Enviando arquivo para API: https://api.example.com
+Arquivo processado com sucesso: TEST_.ret
+```
+
+**Observações:**
+
+- O arquivo deve existir e ser acessível
+- As variáveis de ambiente (`API_ENDPOINT`, `API_KEY`, `LOG_DIR`, etc.) devem estar configuradas
+- O arquivo não será adicionado ao cache, permitindo reprocessamento sem necessidade de limpar o cache
+
 **Estrutura de diretórios:**
 
 ```text/plain

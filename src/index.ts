@@ -44,6 +44,25 @@ program
     });
   });
 
+/**
+ * Processa um arquivo específico
+ * @example `art-w process --file ./volumes/test/TEST_.RET`
+ */
+program
+  .command('process')
+  .description('Processa um arquivo específico')
+  .requiredOption('--file <path>', 'Caminho do arquivo a ser processado')
+  .action(async (options: { file: string }) => {
+    try {
+      // Importação dinâmica para evitar validação de environment antes do comando config
+      const { processSingleFile } = await import('./file-watcher');
+      await processSingleFile(options.file);
+    } catch (error: unknown) {
+      console.error(error instanceof Error ? error.message : 'Erro ao processar arquivo');
+      process.exit(1);
+    }
+  });
+
 // Sempre usa o commander para processar argumentos
 // O comando 'start' é o padrão (isDefault: true), então executará automaticamente
 program.parse(process.argv);
