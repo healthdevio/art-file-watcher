@@ -9,7 +9,7 @@ export type CNABResult = CNAB240 | CNAB400;
 /**
  * Tipo detectado do arquivo CNAB
  */
-export type CNABType = 'CNAB240' | 'CNAB400' | 'UNKNOWN';
+export type CNABType = 'CNAB240_30' | 'CNAB240_40' | 'CNAB400' | 'UNKNOWN';
 
 /**
  * Resultado da leitura de um arquivo de retorno

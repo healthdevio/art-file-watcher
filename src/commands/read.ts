@@ -90,6 +90,7 @@ export async function handleReadCommand(options: ReadCommandOptions): Promise<vo
     logger.info(`Lendo arquivo: ${absoluteFilePath}`);
 
     // Cria instância do serviço e lê o arquivo
+    // O serviço aceita string (path), Buffer ou Stream
     const readService = new ReadRetFileService();
     const result = await readService.read(absoluteFilePath);
 
@@ -106,7 +107,10 @@ export async function handleReadCommand(options: ReadCommandOptions): Promise<vo
       logger.info(`✅ Resultado salvo em: ${absoluteOutputPath}`);
     } else {
       // Caso contrário, exibe no console
-      console.log(formattedOutput);
+      // Limita o tamanho apenas para formato texto (não para JSON)
+      const outputToDisplay = outputFormat === 'json' ? formattedOutput : formattedOutput.slice(0, 2048);
+      console.log(outputToDisplay);
+      // console.log(outputToDisplay?.slice(0, 2048));
     }
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
