@@ -23,9 +23,9 @@ export class TrailerArquivoParser400 {
       CNAB400_LINE_POSITIONS.COMMON.RECORD_TYPE_START,
       CNAB400_LINE_POSITIONS.COMMON.RECORD_TYPE_END,
     );
-    if (recordType !== CNAB400_RECORD_TYPES.TRAILER_ARQUIVO) return null;
+    if (recordType !== CNAB400_RECORD_TYPES.TRAILER_FILE) return null;
 
-    const pos = CNAB400_LINE_POSITIONS.TRAILER_ARQUIVO;
+    const pos = CNAB400_LINE_POSITIONS.TRAILER_FILE;
 
     return {
       recordType,

@@ -23,9 +23,9 @@ export class LineTypeIdentifier400 {
 
     // Identifica tipo de registro
     switch (recordType) {
-      case CNAB400_RECORD_TYPES.DETALHE:
+      case CNAB400_RECORD_TYPES.DETAIL:
         return 'DETALHE';
-      case CNAB400_RECORD_TYPES.TRAILER_ARQUIVO:
+      case CNAB400_RECORD_TYPES.TRAILER_FILE:
         return 'TRAILER_ARQUIVO';
       default:
         return 'UNKNOWN';

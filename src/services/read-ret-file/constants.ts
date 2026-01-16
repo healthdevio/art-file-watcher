@@ -211,16 +211,16 @@ export const CNAB240_LINE_POSITIONS = {
 
 // Tipos de registro válidos no CNAB 400
 export const CNAB400_RECORD_TYPES = {
-  HEADER_ARQUIVO: '02',
-  DETALHE: '7',
-  TRAILER_ARQUIVO: '9',
+  HEADER_FILE: '02',
+  DETAIL: '7',
+  TRAILER_FILE: '9',
 } as const;
 
 // Tamanhos mínimos de linha por tipo de registro
 export const CNAB400_MIN_LINE_LENGTHS = {
-  HEADER_ARQUIVO: 400,
-  DETALHE: 400,
-  TRAILER_ARQUIVO: 400,
+  HEADER_FILE: 400,
+  DETAIL: 400,
+  TRAILER_FILE: 400,
 } as const;
 
 /**
@@ -234,7 +234,7 @@ export const CNAB400_LINE_POSITIONS = {
   },
 
   // Linha de detalhe (tipo 7)
-  DETALHE: {
+  DETAIL: {
     AGENCY_START: 17,
     AGENCY_END: 21,
     AGENCY_DIGIT_START: 21,
@@ -262,7 +262,7 @@ export const CNAB400_LINE_POSITIONS = {
   },
 
   // Trailer do arquivo (tipo 9)
-  TRAILER_ARQUIVO: {
+  TRAILER_FILE: {
     TOTAL_RECORDS_START: 394,
     TOTAL_RECORDS_END: 400,
   },

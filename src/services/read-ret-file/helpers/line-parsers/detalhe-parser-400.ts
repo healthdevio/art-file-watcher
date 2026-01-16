@@ -23,9 +23,9 @@ export class DetalheParser400 {
       CNAB400_LINE_POSITIONS.COMMON.RECORD_TYPE_START,
       CNAB400_LINE_POSITIONS.COMMON.RECORD_TYPE_END,
     );
-    if (recordType !== CNAB400_RECORD_TYPES.DETALHE) return null;
+    if (recordType !== CNAB400_RECORD_TYPES.DETAIL) return null;
 
-    const pos = CNAB400_LINE_POSITIONS.DETALHE;
+    const pos = CNAB400_LINE_POSITIONS.DETAIL;
 
     return {
       recordType,
