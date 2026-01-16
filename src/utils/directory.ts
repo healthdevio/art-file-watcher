@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync } from 'fs';
-import { resolve } from 'path';
+import { existsSync, mkdirSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { safeLogger } from './logger';
 
 /**

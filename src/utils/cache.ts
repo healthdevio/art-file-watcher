@@ -1,5 +1,5 @@
-import { promises as fs } from 'fs';
-import { dirname, join, resolve } from 'path';
+import { promises as fs } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { environment } from '../config/environment';
 
 export interface CacheEntry {
