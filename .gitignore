@@ -21,3 +21,4 @@ docs/cursor
 coverage
 volumes/.test-temp
 volumes/.test-temp/**
+volumes/test/**
