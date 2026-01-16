@@ -1,5 +1,11 @@
 export { ContentProcessor } from './content-processor';
 export { FileReader } from './file-reader';
+export * from './formatters';
 export { HeaderParser240 } from './header-parser-240';
 export { HeaderParser400 } from './header-parser-400';
+export { LineParser240 } from './line-parsers/line-parser-240';
+export { LineParser400 } from './line-parsers/line-parser-400';
+export { LineTypeIdentifier } from './line-type-identifier';
+export { LineTypeIdentifier400 } from './line-type-identifier-400';
 export { StructureBuilder } from './structure-builder';
+export * from './utils/string-extractor';

@@ -1,8 +1,133 @@
-import { CommonHeader, CommonLine } from './common';
+import {
+  CommonAccountFields,
+  CommonAgreementFields,
+  CommonBankFields,
+  CommonCompanyFields,
+  CommonGenerationFields,
+  CommonHeader,
+  CommonLine,
+  CommonMonetaryFields,
+  CommonOperationFields,
+  CommonPaymentDateFields,
+  CommonRecordFields,
+  CommonRegionalNumberFields,
+  CommonSequenceFields,
+  CommonTariffFields,
+} from './common';
 
-export type LineCNAB240 = CommonLine & {
-  payload: Record<string, unknown> | null; // falta tipagem
-};
+/**
+ * Header do lote CNAB 240 (tipo de registro 1)
+ */
+export type HeaderLoteCNAB240 = CommonRecordFields &
+  CommonBankFields &
+  CommonOperationFields &
+  CommonCompanyFields &
+  CommonGenerationFields & {
+    /** Código do lote */
+    lotCode: string;
+    /** Forma de lançamento */
+    entryForm: string;
+    /** Versão do layout */
+    layoutVersion: string;
+    /** Tipo de inscrição da empresa */
+    companyRegistrationType: string;
+    /** Inscrição da empresa */
+    companyRegistration: string;
+    /** Mensagem da empresa */
+    companyMessage: string;
+    /** Nome do banco */
+    bankName: string;
+    /** Hora de geração (HHMMSS) */
+    generationTime: string;
+  };
+
+/**
+ * Segmento T - Dados do título (tipo 3, segmento T)
+ */
+export type SegmentoT = CommonRecordFields &
+  CommonBankFields &
+  CommonSequenceFields &
+  CommonAccountFields &
+  CommonAgreementFields &
+  CommonRegionalNumberFields &
+  CommonTariffFields & {
+    /** Tipo de segmento (T) */
+    segmentType: string;
+    /** Código do lote */
+    lotCode: string;
+    /** Código de movimento */
+    movementCode: string;
+    /** Número do título */
+    titleNumber: string;
+    /** Carteira/Portfólio */
+    titlePortfolio: string;
+    /** Tipo de título */
+    titleType: string;
+    /** Código de juros */
+    interestCode: string;
+  };
+
+/**
+ * Segmento U - Dados do pagamento (tipo 3, segmento U)
+ */
+export type SegmentoU = CommonRecordFields &
+  CommonBankFields &
+  CommonSequenceFields &
+  CommonPaymentDateFields &
+  Pick<CommonMonetaryFields, 'receivedValue'> & {
+    /** Tipo de segmento (U) */
+    segmentType: string;
+    /** Código do lote */
+    lotCode: string;
+    /** Juros/multa/encargos recebidos */
+    accruedInterest: number;
+    /** Valor do desconto concedido */
+    discountAmount: number;
+    /** Valor do abatimento concedido */
+    dischargeAmount: number;
+    /** Valor do título (valor líquido creditado) */
+    paidAmount: number;
+    /** Outras despesas */
+    otherExpenses: number;
+    /** Outros créditos */
+    otherCredits: number;
+    /** Código da ocorrência */
+    occurrenceCode: string;
+  };
+
+/**
+ * Trailer do lote CNAB 240 (tipo de registro 5)
+ */
+export type TrailerLoteCNAB240 = CommonRecordFields &
+  CommonBankFields &
+  CommonSequenceFields & {
+    /** Código do lote */
+    lotCode: string;
+    /** Quantidade de registros no lote */
+    totalLines: number;
+    /** Quantidade de títulos em cobrança */
+    totalTitles: number;
+    /** Valor total dos títulos em cobrança */
+    totalValue: number;
+  };
+
+/**
+ * Trailer do arquivo CNAB 240 (tipo de registro 9)
+ */
+export type TrailerArquivoCNAB240 = CommonRecordFields &
+  CommonBankFields & {
+    /** Quantidade de lotes no arquivo */
+    totalLots: number;
+    /** Quantidade de registros no arquivo */
+    totalLines: number;
+  };
+
+/**
+ * Union type de todos os payloads possíveis para linhas CNAB 240
+ */
+export type LineCNAB240Payload = HeaderLoteCNAB240 | SegmentoT | SegmentoU | TrailerLoteCNAB240 | TrailerArquivoCNAB240;
+
+export type LineCNAB240 = CommonLine<LineCNAB240Payload>;
 
 /**
  * Header do arquivo CNAB 240
