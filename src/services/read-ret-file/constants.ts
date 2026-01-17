@@ -1,9 +1,3 @@
-export enum RetFileTypeEnum {
-  CNAB_400 = 'CNAB_400',
-  CNAB_240_30 = 'CNAB_240_30',
-  CNAB_240_40 = 'CNAB_240_40',
-}
-
 /**
  * Constantes para identificação de arquivos CNAB
  * Baseado nas especificações dos layouts CNAB 240 e CNAB 400

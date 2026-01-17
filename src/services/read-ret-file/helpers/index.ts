@@ -8,4 +8,3 @@ export { LineParser400 } from './line-parsers/line-parser-400';
 export { LineTypeIdentifier } from './line-type-identifier';
 export { LineTypeIdentifier400 } from './line-type-identifier-400';
 export { StructureBuilder } from './structure-builder';
-export * from './utils/string-extractor';
