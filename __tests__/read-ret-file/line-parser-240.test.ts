@@ -3,6 +3,7 @@ import { HeaderLoteParser240 } from '../../src/services/read-ret-file/helpers/li
 import { LineParser240 } from '../../src/services/read-ret-file/helpers/line-parsers/line-parser-240';
 import { SegmentoTParser240 } from '../../src/services/read-ret-file/helpers/line-parsers/segmento-t-parser-240';
 import { SegmentoUParser240 } from '../../src/services/read-ret-file/helpers/line-parsers/segmento-u-parser-240';
+import { SegmentoYParser240 } from '../../src/services/read-ret-file/helpers/line-parsers/segmento-y-parser-240';
 import { TrailerArquivoParser240 } from '../../src/services/read-ret-file/helpers/line-parsers/trailer-arquivo-parser-240';
 import { TrailerLoteParser240 } from '../../src/services/read-ret-file/helpers/line-parsers/trailer-lote-parser-240';
 import { LineTypeIdentifier } from '../../src/services/read-ret-file/helpers/line-type-identifier';
@@ -14,6 +15,8 @@ const SEGMENTO_T_LINE =
   '1040001300001T 460000000810520000000   140302024001219671130202400121    1501202600000000001234500100000030202400121              092019822788000140ANTONIO APARECIDO DA SILVA 58592563968            000000000000000040301                     ';
 const SEGMENTO_U_LINE =
   '1040001300002U 46000000000000000000000000000000000000000000000000000000000000000000000012345000000000012345000000000000000000000000000000150120261601202600000000000000000000000000000000000000000000000000000000000000000000000000000000       ';
+const SEGMENTO_Y_LINE =
+  '1040001300005Y 465000000 000000000000  00000000000000000   320000000000026001040000780005747064114 0000000000000000000000000000000000000000      0022001202600000000003703                                                                      ';
 const TRAILER_LOTE_LINE =
   '10400015         00000400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000                                                                                                                              ';
 const TRAILER_ARQUIVO_LINE =
@@ -43,6 +46,15 @@ describe('LineParser240', () => {
       expect(result).toHaveProperty('segmentType', 'U');
       expect(result).toHaveProperty('receivedValue');
       expect(result).toHaveProperty('paymentDate');
+    });
+
+    it('deve parsear segmento Y corretamente', () => {
+      const result = LineParser240.parse(SEGMENTO_Y_LINE, '040');
+      expect(result).not.toBeNull();
+      expect(result).toHaveProperty('segmentType', 'Y');
+      expect(result).toHaveProperty('bankCode', '104');
+      expect(result).toHaveProperty('movementCode');
+      expect(result).toHaveProperty('optionalRecordId');
     });
 
     it('deve parsear trailer do lote corretamente', () => {
@@ -122,6 +134,36 @@ describe('SegmentoUParser240', () => {
   });
 });
 
+describe('SegmentoYParser240', () => {
+  it('deve extrair campos do segmento Y', () => {
+    const result = SegmentoYParser240.parse(SEGMENTO_Y_LINE, '040');
+    expect(result).not.toBeNull();
+    expect(result?.segmentType).toBe('Y');
+    expect(result?.bankCode).toBe('104');
+    expect(result?.lotCode).toBe('0001');
+    expect(result?.sequenceNumber).toBe('00005');
+    expect(result?.movementCode).toBeDefined();
+    expect(result?.optionalRecordId).toBeDefined();
+    expect(result?.payerRegistrationType).toBeDefined();
+    expect(result?.payerRegistration).toBeDefined();
+  });
+
+  it('deve retornar null para linha inválida', () => {
+    const result = SegmentoYParser240.parse('INVALID LINE', '040');
+    expect(result).toBeNull();
+  });
+
+  it('deve retornar null para linha muito curta', () => {
+    const result = SegmentoYParser240.parse('SHORT', '040');
+    expect(result).toBeNull();
+  });
+
+  it('deve retornar null para linha que não é segmento Y', () => {
+    const result = SegmentoYParser240.parse(SEGMENTO_T_LINE, '040');
+    expect(result).toBeNull();
+  });
+});
+
 describe('TrailerLoteParser240', () => {
   it('deve extrair campos do trailer do lote', () => {
     const result = TrailerLoteParser240.parse(TRAILER_LOTE_LINE, '040');
@@ -155,6 +197,11 @@ describe('LineTypeIdentifier', () => {
   it('deve identificar segmento U', () => {
     const result = LineTypeIdentifier.identify(SEGMENTO_U_LINE, '040');
     expect(result).toBe('SEGMENTO_U');
+  });
+
+  it('deve identificar segmento Y', () => {
+    const result = LineTypeIdentifier.identify(SEGMENTO_Y_LINE, '040');
+    expect(result).toBe('SEGMENTO_Y');
   });
 
   it('deve identificar trailer do lote', () => {

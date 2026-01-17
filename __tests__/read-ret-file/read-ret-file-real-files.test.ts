@@ -68,6 +68,7 @@ describe('ReadRetFileService - Arquivos Reais', () => {
       'TEST_CNAB240_40_COB1501006.A2T9R5',
       'TEST_CNAB240_40_COB1501008.A2T9R5',
       'TEST_CNAB240_40_COB1501009.A2T9R5',
+      'TEST_CNAB240_40_COB160126003A3Y8U4.ret', // Arquivo que contém segmento Y
     ];
 
     testFiles.forEach(fileName => {
@@ -114,6 +115,33 @@ describe('ReadRetFileService - Arquivos Reais', () => {
           expect(linesWithPayload.length).toBeGreaterThan(0);
         }
       });
+
+      // Teste específico para arquivo com segmento Y
+      if (fileName === 'TEST_CNAB240_40_COB160126003A3Y8U4.ret') {
+        it(`deve parsear segmentos Y em ${fileName}`, async () => {
+          const filePath = join(testDir, fileName);
+          const result = await readService.read(filePath);
+
+          expect(result.success).toBe(true);
+          if (result.data && 'lines' in result.data) {
+            const lines = result.data.lines;
+            // Verifica que há pelo menos uma linha do tipo segmento Y
+            const segmentoYLines = lines.filter(
+              l => l.payload && 'segmentType' in l.payload && l.payload.segmentType === 'Y'
+            );
+            expect(segmentoYLines.length).toBeGreaterThan(0);
+            
+            // Verifica que os campos do segmento Y estão presentes
+            const firstSegmentoY = segmentoYLines[0]?.payload;
+            if (firstSegmentoY && 'segmentType' in firstSegmentoY) {
+              expect(firstSegmentoY).toHaveProperty('segmentType', 'Y');
+              expect(firstSegmentoY).toHaveProperty('bankCode');
+              expect(firstSegmentoY).toHaveProperty('movementCode');
+              expect(firstSegmentoY).toHaveProperty('optionalRecordId');
+            }
+          }
+        });
+      }
     });
   });
 

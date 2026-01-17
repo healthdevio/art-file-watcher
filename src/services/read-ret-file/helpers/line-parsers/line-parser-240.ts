@@ -3,6 +3,7 @@ import { LineTypeIdentifier } from '../line-type-identifier';
 import { HeaderLoteParser240 } from './header-lote-parser-240';
 import { SegmentoTParser240 } from './segmento-t-parser-240';
 import { SegmentoUParser240 } from './segmento-u-parser-240';
+import { SegmentoYParser240 } from './segmento-y-parser-240';
 import { TrailerArquivoParser240 } from './trailer-arquivo-parser-240';
 import { TrailerLoteParser240 } from './trailer-lote-parser-240';
 
@@ -23,6 +24,7 @@ export class LineParser240 {
       HEADER_LOTE: () => HeaderLoteParser240.parse(line, version),
       SEGMENTO_T: () => SegmentoTParser240.parse(line, version),
       SEGMENTO_U: () => SegmentoUParser240.parse(line, version),
+      SEGMENTO_Y: () => SegmentoYParser240.parse(line, version),
       TRAILER_LOTE: () => TrailerLoteParser240.parse(line, version),
       TRAILER_ARQUIVO: () => TrailerArquivoParser240.parse(line, version),
     };

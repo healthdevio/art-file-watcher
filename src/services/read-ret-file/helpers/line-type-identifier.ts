@@ -5,6 +5,7 @@ export type CNAB240LineType =
   | 'HEADER_LOTE'
   | 'SEGMENTO_T'
   | 'SEGMENTO_U'
+  | 'SEGMENTO_Y'
   | 'TRAILER_LOTE'
   | 'TRAILER_ARQUIVO'
   | 'UNKNOWN';
@@ -62,6 +63,9 @@ export class LineTypeIdentifier {
 
       case CNAB240_SEGMENT_TYPES.U:
         return 'SEGMENTO_U';
+
+      case CNAB240_SEGMENT_TYPES.Y:
+        return 'SEGMENTO_Y';
 
       // Outros segmentos podem ser adicionados no futuro
       // case CNAB240_SEGMENT_TYPES.J:

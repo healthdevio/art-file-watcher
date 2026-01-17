@@ -96,6 +96,40 @@ export type SegmentoU = CommonRecordFields &
   };
 
 /**
+ * Segmento Y - Dados adicionais / Alegações do Sacado (tipo 3, segmento Y - opcional)
+ */
+export type SegmentoY = CommonRecordFields &
+  CommonBankFields &
+  CommonSequenceFields & {
+    /** Tipo de segmento (Y) */
+    segmentType: string;
+    /** Código do lote */
+    lotCode: string;
+    /** Código de movimento */
+    movementCode: string;
+    /** Identificação do registro opcional (ex: 01, 02, 03, etc.) */
+    optionalRecordId: string;
+    /** Tipo de inscrição do sacado (1 = CPF, 2 = CNPJ) */
+    payerRegistrationType: string;
+    /** Número de inscrição do sacado (CPF ou CNPJ) */
+    payerRegistration: string;
+    /** Nome do sacado */
+    payerName: string;
+    /** Endereço do sacado */
+    payerAddress: string;
+    /** Bairro do sacado */
+    payerDistrict: string;
+    /** CEP do sacado (5 dígitos) */
+    payerZipCode: string;
+    /** Sufixo do CEP (3 dígitos) */
+    payerZipCodeSuffix: string;
+    /** Cidade do sacado */
+    payerCity: string;
+    /** Unidade da Federação (UF) do sacado */
+    payerState: string;
+  };
+
+/**
  * Trailer do lote CNAB 240 (tipo de registro 5)
  */
 export type TrailerLoteCNAB240 = CommonRecordFields &
@@ -125,7 +159,13 @@ export type TrailerArquivoCNAB240 = CommonRecordFields &
 /**
  * Union type de todos os payloads possíveis para linhas CNAB 240
  */
-export type LineCNAB240Payload = HeaderLoteCNAB240 | SegmentoT | SegmentoU | TrailerLoteCNAB240 | TrailerArquivoCNAB240;
+export type LineCNAB240Payload =
+  | HeaderLoteCNAB240
+  | SegmentoT
+  | SegmentoU
+  | SegmentoY
+  | TrailerLoteCNAB240
+  | TrailerArquivoCNAB240;
 
 export type LineCNAB240 = CommonLine<LineCNAB240Payload>;
 
