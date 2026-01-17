@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.0.12](https://github.com/healthdevio/art-file-watcher/compare/v1.0.11...v1.0.12) (2026-01-17)
+
+
+### Features
+
+* adiciona suporte ao segmento Y no parsing de arquivos CNAB 240, incluindo testes e documentação ([d883bc6](https://github.com/healthdevio/art-file-watcher/commit/d883bc638534e61990a05ea3379e232546301152))
+
+
+### Bug Fixes
+
+* ajusta teste ([7d3aea6](https://github.com/healthdevio/art-file-watcher/commit/7d3aea612766eca64e71f6476ad6fe6fffd338f3))
+
+### [1.0.11](https://github.com/healthdevio/art-file-watcher/compare/v1.0.10...v1.0.11) (2026-01-17)
+
+
+### Features
+
+* adiciona comando para ler arquivos de retorno bancário (CNAB) com suporte a formatos de saída ([0f3750b](https://github.com/healthdevio/art-file-watcher/commit/0f3750b0160db45d22645d8b10c7f834cd7356fe))
+* adiciona suporte para formatação de datas nos headers de arquivos CNAB 240 e CNAB 400, atualiza testes e ajusta lógica de leitura para arquivos grandes ([24724d4](https://github.com/healthdevio/art-file-watcher/commit/24724d4a08a5238d7ee6e0330a9bc98e267e57df))
+* implementa suporte para leitura e parsing de arquivos CNAB 240 e CNAB 400, incluindo testes e utilitários de formatação ([19c01f9](https://github.com/healthdevio/art-file-watcher/commit/19c01f9b52f017f9edb68018421154c12fc2d261))
+
+### [1.0.10](https://github.com/healthdevio/art-file-watcher/compare/v1.0.9...v1.0.10) (2026-01-16)
+
+
+### Features
+
+* adiciona comando para processar arquivo específico sem cache ([f271718](https://github.com/healthdevio/art-file-watcher/commit/f271718c3056a6097cfb4ea16ae35e974fec03a7))
+
 ### [1.0.9](https://github.com/healthdevio/art-file-watcher/compare/v1.0.8...v1.0.9) (2025-12-15)
 
 

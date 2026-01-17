@@ -23,7 +23,7 @@ export default tseslint.config(
       'node_modules/**',
       'bin/**',
       'coverage/**',
-      'volumes/.test-temp/**',
+      'volumes/**',
     ],
   },
   // Configuração base para todos os arquivos

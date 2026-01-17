@@ -1,9 +1,13 @@
 /* eslint-disable @typescript-eslint/no-floating-promises */
 import 'dotenv/config';
+import { existsSync } from 'fs';
+import { stat } from 'fs/promises';
+import { resolve } from 'path';
 import { environment } from './config/environment';
 import { APP_VERSION } from './config/version';
 import { ApiClient } from './services/api-client';
 import { AutoUpdate } from './services/auto-update';
+import { generateFileHash } from './services/file-hash';
 import { FileWatcherService } from './services/file-watcher-service';
 import { UploadQueue } from './services/upload-queue';
 import { validateApplicationDirectories } from './utils/directory';
@@ -132,4 +136,74 @@ function setupGracefulShutdown(fileWatcherService: FileWatcherService, autoUpdat
     logger.error(`Promessa rejeitada não tratada: ${message}`);
     shutdown('unhandledRejection');
   });
+}
+
+/**
+ * Processa um arquivo específico sem adicionar ao cache
+ * Loga todas as informações do arquivo incluindo o hash
+ *
+ * @param filePath - Caminho do arquivo a ser processado
+ */
+export async function processSingleFile(filePath: string): Promise<void> {
+  try {
+    const { API_ENDPOINT, API_KEY, LOG_DIR, QUEUE_CONCURRENCY, LOG_LEVEL } = environment;
+    const logger = initLogger(LOG_DIR, LOG_LEVEL);
+
+    logger.info(`Processando arquivo específico: ${filePath}`);
+
+    // Resolve o caminho absoluto
+    const resolvedPath = resolve(filePath);
+
+    // Valida se o arquivo existe
+    if (!existsSync(resolvedPath)) {
+      const errorMessage = `Arquivo não encontrado: ${resolvedPath}`;
+      logger.error(errorMessage);
+      throw new Error(errorMessage);
+    }
+
+    // Obtém informações do arquivo
+    const stats = await stat(resolvedPath);
+    if (!stats.isFile()) {
+      const errorMessage = `O caminho não é um arquivo: ${resolvedPath}`;
+      logger.error(errorMessage);
+      throw new Error(errorMessage);
+    }
+
+    // Gera o hash do arquivo
+    logger.debug(`Gerando hash SHA256 para: ${resolvedPath}`);
+    const hashResult = await generateFileHash(resolvedPath);
+
+    // Loga todas as informações do arquivo
+    logger.info('=== Informações do Arquivo ===');
+    logger.info(`Nome: ${hashResult.fileName}`);
+    logger.info(`Caminho: ${hashResult.filePath}`);
+    logger.info(`Tamanho: ${stats.size} bytes`);
+    logger.info(`Data de Modificação: ${new Date(stats.mtimeMs).toISOString()}`);
+    logger.info(`Hash SHA256: ${hashResult.fileHash}`);
+    logger.info('================================');
+
+    // Envia para API usando UploadQueue
+    const apiClient = new ApiClient({ endpoint: API_ENDPOINT, apiKey: API_KEY });
+    const uploadQueue = new UploadQueue({ concurrency: QUEUE_CONCURRENCY, apiClient });
+
+    logger.debug(`Enviando arquivo para API: ${API_ENDPOINT}`);
+
+    // Enfileira o arquivo para upload (sem callback de cache)
+    await uploadQueue.enqueue({
+      filePath: resolvedPath,
+      hashResult,
+      // Não fornece onSuccess para não atualizar cache
+    });
+
+    // Aguarda a fila terminar
+    await uploadQueue.onIdle();
+    await uploadQueue.stop();
+
+    logger.info(`Arquivo processado com sucesso: ${hashResult.fileName}`);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    const logger = safeLogger();
+    logger.error(`Erro ao processar arquivo ${filePath}: ${errorMessage}`);
+    throw error;
+  }
 }

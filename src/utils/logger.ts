@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync } from 'fs';
-import { join, resolve } from 'path';
+import { existsSync, mkdirSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { createLogger, format, transports, type Logger as WinstonLogger } from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 
