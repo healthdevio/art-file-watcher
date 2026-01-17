@@ -1,10 +1,7 @@
 import { IDENTIFICATION_POSITIONS, IDENTIFICATION_VALUES, MIN_LINE_LENGTHS } from './constants';
 import { CNABType } from './types';
 
-/**
- * Identificador desacoplado de arquivos CNAB.
- * Esta classe é totalmente independente e pode ser copiada para outros projetos.
- */
+/** Identificador de arquivos `CNAB`. */
 export class FileIdentifier {
   /**
    * Identifica o tipo de arquivo CNAB baseado nas primeiras duas linhas.

@@ -1,4 +1,4 @@
-import { CNAB240_MIN_LINE_LENGTHS, CNAB240_RECORD_TYPES, CNAB240_SEGMENT_TYPES } from '../constants';
+import { CNAB240_MIN_LINE_LENGTH, CNAB240_RECORD_TYPES, CNAB240_SEGMENT_TYPES } from '../constants';
 
 /** Tipo de linha identificado */
 export type CNAB240LineType =
@@ -22,7 +22,7 @@ export class LineTypeIdentifier {
    */
   static identify(line: string, _version: '030' | '040'): CNAB240LineType {
     // Valida tamanho mínimo
-    if (line.length < CNAB240_MIN_LINE_LENGTHS.DETAIL) return 'UNKNOWN';
+    if (line.length < CNAB240_MIN_LINE_LENGTH) return 'UNKNOWN';
 
     // Extrai tipo de registro (posição 7)
     const recordType = line.substring(7, 8);
