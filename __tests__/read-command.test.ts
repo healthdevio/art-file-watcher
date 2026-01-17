@@ -6,7 +6,9 @@ import { TEST_DIRS } from './setup';
 
 describe('ReadCommand', () => {
   const testFileDir = join(TEST_DIRS.BASE, 'read-test');
-  const testFilePath = resolve(process.cwd(), 'volumes/test/TEST_.ret');
+  // Usa arquivo pequeno para testes de console.log (arquivos grandes exigem --output)
+  const smallTestFilePath = resolve(process.cwd(), 'volumes/test/TEST_CNAB240_40_COB1501001.A2T9R5');
+  const largeTestFilePath = resolve(process.cwd(), 'volumes/test/TEST_.ret');
   const outputFileDir = join(TEST_DIRS.BASE, 'read-output');
 
   // Cria diretórios de teste
@@ -58,13 +60,13 @@ describe('ReadCommand', () => {
 
     it('deve ler arquivo existente e retornar resultado em formato texto', async () => {
       // Verifica se o arquivo de teste existe
-      if (!existsSync(testFilePath)) {
-        console.warn(`Arquivo de teste não encontrado: ${testFilePath}`);
+      if (!existsSync(smallTestFilePath)) {
+        console.warn(`Arquivo de teste não encontrado: ${smallTestFilePath}`);
         return;
       }
 
       const options: ReadCommandOptions = {
-        file: testFilePath,
+        file: smallTestFilePath,
         format: 'text',
       };
 
@@ -84,13 +86,13 @@ describe('ReadCommand', () => {
     });
 
     it('deve ler arquivo existente e retornar resultado em formato JSON', async () => {
-      if (!existsSync(testFilePath)) {
-        console.warn(`Arquivo de teste não encontrado: ${testFilePath}`);
+      if (!existsSync(smallTestFilePath)) {
+        console.warn(`Arquivo de teste não encontrado: ${smallTestFilePath}`);
         return;
       }
 
       const options: ReadCommandOptions = {
-        file: testFilePath,
+        file: smallTestFilePath,
         format: 'json',
       };
 
@@ -111,13 +113,13 @@ describe('ReadCommand', () => {
     });
 
     it('deve usar flag --json para formato JSON', async () => {
-      if (!existsSync(testFilePath)) {
-        console.warn(`Arquivo de teste não encontrado: ${testFilePath}`);
+      if (!existsSync(smallTestFilePath)) {
+        console.warn(`Arquivo de teste não encontrado: ${smallTestFilePath}`);
         return;
       }
 
       const options: ReadCommandOptions = {
-        file: testFilePath,
+        file: smallTestFilePath,
         json: true,
       };
 
@@ -135,15 +137,30 @@ describe('ReadCommand', () => {
       consoleSpy.mockRestore();
     });
 
+    it('deve exigir --output para arquivos grandes', async () => {
+      if (!existsSync(largeTestFilePath)) {
+        console.warn(`Arquivo de teste grande não encontrado: ${largeTestFilePath}`);
+        return;
+      }
+
+      const options: ReadCommandOptions = {
+        file: largeTestFilePath,
+        format: 'json',
+        // Não fornece --output
+      };
+
+      await expect(handleReadCommand(options)).rejects.toThrow('Arquivo muito grande');
+    });
+
     it('deve salvar resultado em arquivo quando --output é fornecido (JSON)', async () => {
-      if (!existsSync(testFilePath)) {
-        console.warn(`Arquivo de teste não encontrado: ${testFilePath}`);
+      if (!existsSync(smallTestFilePath)) {
+        console.warn(`Arquivo de teste não encontrado: ${smallTestFilePath}`);
         return;
       }
 
       const outputPath = join(outputFileDir, 'output.json');
       const options: ReadCommandOptions = {
-        file: testFilePath,
+        file: smallTestFilePath,
         format: 'json',
         output: outputPath,
       };
@@ -158,14 +175,14 @@ describe('ReadCommand', () => {
     });
 
     it('deve salvar resultado em arquivo quando --output é fornecido (texto)', async () => {
-      if (!existsSync(testFilePath)) {
-        console.warn(`Arquivo de teste não encontrado: ${testFilePath}`);
+      if (!existsSync(smallTestFilePath)) {
+        console.warn(`Arquivo de teste não encontrado: ${smallTestFilePath}`);
         return;
       }
 
       const outputPath = join(outputFileDir, 'output.txt');
       const options: ReadCommandOptions = {
-        file: testFilePath,
+        file: smallTestFilePath,
         format: 'text',
         output: outputPath,
       };
@@ -179,14 +196,14 @@ describe('ReadCommand', () => {
     });
 
     it('deve criar diretório de saída se não existir', async () => {
-      if (!existsSync(testFilePath)) {
-        console.warn(`Arquivo de teste não encontrado: ${testFilePath}`);
+      if (!existsSync(smallTestFilePath)) {
+        console.warn(`Arquivo de teste não encontrado: ${smallTestFilePath}`);
         return;
       }
 
       const nestedOutputPath = join(testFileDir, 'nested', 'output.json');
       const options: ReadCommandOptions = {
-        file: testFilePath,
+        file: smallTestFilePath,
         format: 'json',
         output: nestedOutputPath,
       };
@@ -199,20 +216,20 @@ describe('ReadCommand', () => {
 
   describe('ReadRetFileService', () => {
     it('deve ler arquivo e retornar estrutura ReadResult', async () => {
-      if (!existsSync(testFilePath)) {
-        console.warn(`Arquivo de teste não encontrado: ${testFilePath}`);
+      if (!existsSync(smallTestFilePath)) {
+        console.warn(`Arquivo de teste não encontrado: ${smallTestFilePath}`);
         return;
       }
 
       const service = new ReadRetFileService();
-      const result = await service.read(testFilePath);
+      const result = await service.read(smallTestFilePath);
 
       expect(result).toHaveProperty('success');
       expect(result).toHaveProperty('filePath');
       expect(result).toHaveProperty('cnabType');
       expect(result.success).toBe(true);
-      expect(result.filePath).toBe(testFilePath);
-      // O arquivo TEST_.ret é um arquivo CNAB 400 real
+      expect(result.filePath).toBe(smallTestFilePath);
+      // O arquivo TEST_CNAB240_40_COB1501001.A2T9R5 é um arquivo CNAB 240 v040
       expect(['CNAB400', 'CNAB240_30', 'CNAB240_40', 'UNKNOWN']).toContain(result.cnabType);
     });
 
@@ -236,13 +253,13 @@ describe('ReadCommand', () => {
     });
 
     it('deve incluir metadata quando arquivo é lido com sucesso', async () => {
-      if (!existsSync(testFilePath)) {
-        console.warn(`Arquivo de teste não encontrado: ${testFilePath}`);
+      if (!existsSync(smallTestFilePath)) {
+        console.warn(`Arquivo de teste não encontrado: ${smallTestFilePath}`);
         return;
       }
 
       const service = new ReadRetFileService();
-      const result = await service.read(testFilePath);
+      const result = await service.read(smallTestFilePath);
 
       expect(result.success).toBe(true);
       expect(result.metadata).toBeDefined();
@@ -251,13 +268,13 @@ describe('ReadCommand', () => {
     });
 
     it('deve criar estrutura CNAB básica quando arquivo é lido', async () => {
-      if (!existsSync(testFilePath)) {
-        console.warn(`Arquivo de teste não encontrado: ${testFilePath}`);
+      if (!existsSync(smallTestFilePath)) {
+        console.warn(`Arquivo de teste não encontrado: ${smallTestFilePath}`);
         return;
       }
 
       const service = new ReadRetFileService();
-      const result = await service.read(testFilePath);
+      const result = await service.read(smallTestFilePath);
 
       expect(result.success).toBe(true);
       // Por enquanto, como identifyFile retorna UNKNOWN, não deve ter data estruturada

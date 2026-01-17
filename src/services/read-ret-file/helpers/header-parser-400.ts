@@ -1,4 +1,5 @@
 import { HeaderCNAB400 } from '../interfaces/CNAB-400';
+import { formatDate } from './formatters';
 
 /**
  * Parser para extrair campos do header de arquivo CNAB 400
@@ -7,7 +8,6 @@ import { HeaderCNAB400 } from '../interfaces/CNAB-400';
 export class HeaderParser400 {
   /**
    * Extrai campos do header da primeira linha do arquivo CNAB 400
-   *
    * @param firstLine - Primeira linha do arquivo (header)
    * @returns HeaderCNAB400 com todos os campos extraídos
    */
@@ -25,7 +25,7 @@ export class HeaderParser400 {
       bankName: this.substring(line, 79, 94).trim(), // Nome do banco (posição 79-93)
       companyName: this.substring(line, 46, 76).trim(), // Nome da empresa (posição 46-75)
       companyCode: this.substring(line, 26, 46), // Código da empresa (posição 26-45)
-      generationDate: this.substring(line, 94, 100), // Data de geração (DDMMAA) (posição 94-99)
+      generationDate: formatDate(this.substring(line, 94, 100), 'DDMMAA'), // Data de geração (DDMMAA -> DD/MM/AA) (posição 94-99)
       reserved: this.substring(line, 100, 394), // Reservado
       fileSequence: this.substring(line, 394, 400), // Número sequencial do arquivo (posição 394-399)
     };

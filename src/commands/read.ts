@@ -95,22 +95,30 @@ export async function handleReadCommand(options: ReadCommandOptions): Promise<vo
     const result = await readService.read(absoluteFilePath);
 
     // Determina o formato de saída
-    const outputFormat = options.json || options.format === 'json' ? 'json' : 'text';
+    const outputFormat = options?.json || options?.format === 'json' ? 'json' : 'text';
 
     // Formata o resultado
     const formattedOutput = outputFormat === 'json' ? formatAsJson(result) : formatAsText(result);
+
+    // Verifica se o arquivo é grande (mais de 10KB)
+    const fileSize = stats.size;
+    const isLargeFile = fileSize > 10 * 1024; // 10KB
 
     // Se --output foi fornecido, salva em arquivo
     if (options?.output) {
       const absoluteOutputPath = resolve(options.output);
       writeOutput(formattedOutput, absoluteOutputPath);
       logger.info(`✅ Resultado salvo em: ${absoluteOutputPath}`);
+    } else if (isLargeFile) {
+      // Para arquivos grandes, exige --output
+      const errorMessage = `Arquivo muito grande (${(fileSize / 1024).toFixed(2)} KB). Use --output para salvar o resultado em arquivo.`;
+      logger.error(errorMessage);
+      throw new Error(errorMessage);
     } else {
-      // Caso contrário, exibe no console
       // Limita o tamanho apenas para formato texto (não para JSON)
       const outputToDisplay = outputFormat === 'json' ? formattedOutput : formattedOutput.slice(0, 2048);
+      // eslint-disable-next-line no-console
       console.log(outputToDisplay);
-      // console.log(outputToDisplay?.slice(0, 2048));
     }
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';

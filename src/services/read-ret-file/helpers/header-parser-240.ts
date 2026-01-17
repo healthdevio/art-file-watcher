@@ -1,4 +1,5 @@
 import { HeaderCNAB240 } from '../interfaces/CNAB-240';
+import { formatDate } from './formatters';
 
 /**
  * Parser para extrair campos do header de arquivo CNAB 240
@@ -28,7 +29,7 @@ export class HeaderParser240 {
       companyRegistration: this.substring(line, 18, 32), // Inscrição da empresa
       companyName: this.substring(line, 72, 102).trim(), // Nome da empresa
       bankName: this.substring(line, 102, 132).trim(), // Nome do banco
-      generationDate: this.substring(line, 143, 151), // Data de geração (DDMMAAAA)
+      generationDate: formatDate(this.substring(line, 143, 151), 'DDMMAAAA'), // Data de geração (DDMMAAAA -> DD/MM/AAAA)
       generationTime: this.substring(line, 151, 157), // Hora de geração (HHMMSS)
       fileSequence: this.substring(line, 157, 163), // Número sequencial do arquivo
       recordDensity: this.substring(line, 164, 167), // Densidade de gravação
