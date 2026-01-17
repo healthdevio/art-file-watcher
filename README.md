@@ -196,6 +196,124 @@ Arquivo processado com sucesso: TEST_.ret
 - As variáveis de ambiente (`API_ENDPOINT`, `API_KEY`, `LOG_DIR`, etc.) devem estar configuradas
 - O arquivo não será adicionado ao cache, permitindo reprocessamento sem necessidade de limpar o cache
 
+### Comando para ler arquivo de retorno bancário (CNAB)
+
+O comando `read` permite ler e parsear arquivos de retorno bancário nos formatos CNAB 240 e CNAB 400, extraindo informações estruturadas do header e das linhas do arquivo.
+
+**Características:**
+
+- Suporta arquivos CNAB 240 (versões 030 e 040) e CNAB 400
+- Extrai informações do header (banco, empresa, data de geração, etc.)
+- Parseia todas as linhas do arquivo com seus respectivos payloads
+- Suporta saída em formato JSON ou texto legível
+- Para arquivos grandes (>10KB), exige uso da flag `--output` para salvar em arquivo
+- Não requer configuração de variáveis de ambiente (funciona de forma standalone)
+
+**Sintaxe:**
+
+```bash
+art-w read --file <caminho-do-arquivo> [--format <json|text>] [--json] [--output <caminho-de-saida>]
+```
+
+**Opções:**
+
+| Opção              | Descrição                                                                 | Padrão |
+| ------------------ | ------------------------------------------------------------------------- | ------ |
+| `--file <path>`    | Caminho do arquivo de retorno a ser lido (obrigatório)                    | -      |
+| `--format <type>`  | Formato de saída: `json` ou `text`                                        | `text` |
+| `--json`           | Formato de saída JSON (equivalente a `--format json`)                     | -      |
+| `--output <path>`  | Caminho do arquivo de saída (opcional, se não fornecido exibe no console) | -      |
+
+**Exemplos:**
+
+Modo de desenvolvimento:
+
+```bash
+# Lê arquivo e exibe resultado em formato texto
+npm run dev -- read --file ./volumes/test/TEST_CNAB240_40_COB1501001.A2T9R5
+
+# Lê arquivo e exibe resultado em formato JSON
+npm run dev -- read --file ./volumes/test/TEST_CNAB240_40_COB1501001.A2T9R5 --json
+
+# Lê arquivo e salva resultado em arquivo JSON
+npm run dev -- read --file ./volumes/test/TEST_.ret --format json --output ./volumes/test/output/resultado.json
+```
+
+Modo de produção (binário):
+
+```bash
+# Lê arquivo e exibe resultado em formato texto
+./art-w read --file ./volumes/test/TEST_CNAB240_40_COB1501001.A2T9R5
+
+# Lê arquivo e exibe resultado em formato JSON
+./art-w read --file ./volumes/test/TEST_CNAB240_40_COB1501001.A2T9R5 --json
+
+# Lê arquivo grande e salva resultado em arquivo (obrigatório para arquivos >10KB)
+./art-w read --file ./volumes/test/TEST_.ret --format json --output ./volumes/test/output/resultado.json
+```
+
+**Saída esperada (formato texto):**
+
+```text
+📄 Arquivo: /caminho/completo/para/TEST_CNAB240_40_COB1501001.A2T9R5
+📋 Tipo CNAB: CNAB240_40
+📊 Linhas: 5
+💾 Tamanho: 1452 bytes
+
+📦 Dados do arquivo:
+  Header: {
+    "fileType": "CNAB240",
+    "bankCode": "104",
+    "companyName": "CONSELHO REG ENGENHARIA E AGRO",
+    "generationDate": "15/01/2026",
+    ...
+  }
+  Total de linhas: 5
+```
+
+**Saída esperada (formato JSON):**
+
+```json
+{
+  "success": true,
+  "filePath": "/caminho/completo/para/TEST_CNAB240_40_COB1501001.A2T9R5",
+  "cnabType": "CNAB240_40",
+  "metadata": {
+    "lineCount": 5,
+    "fileSize": 1452
+  },
+  "data": {
+    "header": {
+      "fileType": "CNAB240",
+      "bankCode": "104",
+      "companyName": "CONSELHO REG ENGENHARIA E AGRO",
+      "generationDate": "15/01/2026",
+      ...
+    },
+    "lines": [
+      {
+        "line": "10400011T0100030...",
+        "number": 2,
+        "payload": {
+          "recordType": "1",
+          "bankCode": "104",
+          ...
+        }
+      },
+      ...
+    ]
+  }
+}
+```
+
+**Observações:**
+
+- O arquivo deve existir e ser acessível
+- Arquivos maiores que 10KB exigem uso da flag `--output` para salvar o resultado em arquivo
+- O comando identifica automaticamente o tipo de arquivo CNAB (CNAB240_30, CNAB240_40, CNAB400 ou UNKNOWN)
+- A data de geração (`generationDate`) é formatada automaticamente (DD/MM/AAAA para CNAB 240, DD/MM/AA para CNAB 400)
+- Para arquivos muito grandes, use `--output` para evitar problemas de memória no console
+
 **Estrutura de diretórios:**
 
 ```text/plain
