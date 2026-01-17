@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.0.12](https://github.com/healthdevio/art-file-watcher/compare/v1.0.11...v1.0.12) (2026-01-17)
+
+
+### Features
+
+* adiciona suporte ao segmento Y no parsing de arquivos CNAB 240, incluindo testes e documentação ([d883bc6](https://github.com/healthdevio/art-file-watcher/commit/d883bc638534e61990a05ea3379e232546301152))
+
+
+### Bug Fixes
+
+* ajusta teste ([7d3aea6](https://github.com/healthdevio/art-file-watcher/commit/7d3aea612766eca64e71f6476ad6fe6fffd338f3))
+
 ### [1.0.11](https://github.com/healthdevio/art-file-watcher/compare/v1.0.10...v1.0.11) (2026-01-17)
 
 
