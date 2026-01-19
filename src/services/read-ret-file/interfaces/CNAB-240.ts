@@ -50,7 +50,8 @@ export type SegmentoT = CommonRecordFields &
   CommonAccountFields &
   CommonAgreementFields &
   CommonRegionalNumberFields &
-  CommonTariffFields & {
+  CommonTariffFields &
+  Pick<CommonMonetaryFields, 'receivedValue'> & {
     /** Tipo de segmento (T) */
     segmentType: string;
     /** Código do lote */
@@ -65,6 +66,12 @@ export type SegmentoT = CommonRecordFields &
     titleType: string;
     /** Código de juros */
     interestCode: string;
+    /** Tipo de inscrição do pagador (1=CPF, 2=CNPJ) */
+    payerRegistrationType: string;
+    /** Número de inscrição do pagador (CPF ou CNPJ) */
+    payerRegistration: string;
+    /** Nome do pagador */
+    payerName: string;
   };
 
 /**
@@ -79,6 +86,8 @@ export type SegmentoU = CommonRecordFields &
     segmentType: string;
     /** Código do lote */
     lotCode: string;
+    /** Código de movimento retorno */
+    movementCode: string;
     /** Juros/multa/encargos recebidos */
     accruedInterest: number;
     /** Valor do desconto concedido */

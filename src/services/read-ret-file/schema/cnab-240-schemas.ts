@@ -1,4 +1,4 @@
-import { normalizeAccount, normalizeAgency } from '../helpers/formatters';
+import { normalizeAccount, normalizeAgency, normalizeRegistration } from '../helpers/formatters';
 import {
   HeaderLoteCNAB240,
   SegmentoT,
@@ -38,6 +38,11 @@ export const COMMON_MONETARY_FIELDS_SCHEMA_240: PartialSchema<CommonMonetaryFiel
   tariff: { start: 198, end: 213, extractor: 'monetary' },
   receivedValue: { start: 77, end: 92, extractor: 'monetary' },
 };
+
+/** Schema específico para valor do título no Segmento T - CNAB 240 */
+export const SEGMENTO_T_TITLE_VALUE_SCHEMA: PartialSchema<Pick<CommonMonetaryFields, 'receivedValue'>> = {
+  receivedValue: { start: 83, end: 97, extractor: 'monetary' },
+};
 /** Schemas comuns para campos de registro - CNAB 240 */
 export const COMMON_RECORD_FIELDS_SCHEMA_240: PartialSchema<CommonRecordFields> = {
   recordType: { start: 7, end: 8, extractor: 'string' },
@@ -70,12 +75,17 @@ export const SEGMENTO_T_SCHEMA_030: LineSchema<SegmentoT> = combineSchemas<Segme
     titlePortfolio: { start: 73, end: 76, extractor: 'string' },
     titleType: { start: 76, end: 77, extractor: 'string' },
     interestCode: { start: 77, end: 78, extractor: 'string' },
+    payerRegistrationType: { start: 133, end: 134, extractor: 'string' },
+    payerRegistration: { start: 134, end: 148, extractor: 'string' },
+    payerName: { start: 148, end: 188, extractor: 'string' },
   },
   COMMON_MONETARY_FIELDS_SCHEMA_240,
 );
 
 /**
  * Schema para Segmento T CNAB 240 - Versão 040
+ * Nota: O valor do título está na posição 83-97 conforme documentação oficial
+ * Nota: Posições ajustadas de base 1 (documentação) para base 0 (código)
  */
 export const SEGMENTO_T_SCHEMA_040: LineSchema<SegmentoT> = combineSchemas<SegmentoT>(
   COMMON_RECORD_FIELDS_SCHEMA_240,
@@ -95,8 +105,14 @@ export const SEGMENTO_T_SCHEMA_040: LineSchema<SegmentoT> = combineSchemas<Segme
     titlePortfolio: { start: 73, end: 76, extractor: 'string' },
     titleType: { start: 76, end: 77, extractor: 'string' },
     interestCode: { start: 77, end: 78, extractor: 'string' },
+    payerRegistrationType: { start: 133, end: 134, extractor: 'string' },
+    payerRegistration: { start: 134, end: 148, extractor: 'string' },
+    payerName: { start: 148, end: 188, extractor: 'string' },
   },
-  COMMON_MONETARY_FIELDS_SCHEMA_240,
+  {
+    tariff: { start: 198, end: 213, extractor: 'monetary' },
+    receivedValue: { start: 81, end: 96, extractor: 'monetary' },
+  },
 );
 
 /** Schema para Segmento U CNAB 240 */
@@ -105,6 +121,7 @@ export const SEGMENTO_U_SCHEMA: LineSchema<SegmentoU> = combineSchemas<SegmentoU
   lotCode: { start: 3, end: 7, extractor: 'string' },
   sequenceNumber: { start: 8, end: 13, extractor: 'string' },
   segmentType: { start: 13, end: 14, extractor: 'string' },
+  movementCode: { start: 15, end: 17, extractor: 'string' },
   accruedInterest: { start: 17, end: 32, extractor: 'monetary' },
   discountAmount: { start: 32, end: 47, extractor: 'monetary' },
   dischargeAmount: { start: 47, end: 62, extractor: 'monetary' },
@@ -136,7 +153,14 @@ export const SEGMENTO_Y_SCHEMA: LineSchema<SegmentoY> = combineSchemas<SegmentoY
   payerState: { start: 153, end: 155, extractor: 'string' },
 });
 
-/** Schema para Header do Lote CNAB 240 */
+/** Schema para Header do Lote CNAB 240 - Arquivo Retorno
+ * Baseado na documentação oficial: Layout CNAB_240_v_1_8
+ * Posições corrigidas conforme especificação FEBRABAN
+ *
+ * Nota: O Header do Lote de Retorno não possui campo de hora (generationTime),
+ * apenas data de gravação (198-205) e data do crédito (206-213).
+ * O generationTime será preenchido como string vazia.
+ */
 export const HEADER_LOTE_SCHEMA: LineSchema<HeaderLoteCNAB240> = combineSchemas<HeaderLoteCNAB240>(
   COMMON_RECORD_FIELDS_SCHEMA_240,
   {
@@ -147,12 +171,12 @@ export const HEADER_LOTE_SCHEMA: LineSchema<HeaderLoteCNAB240> = combineSchemas<
     entryForm: { start: 11, end: 13, extractor: 'string' },
     layoutVersion: { start: 13, end: 16, extractor: 'string' },
     companyRegistrationType: { start: 17, end: 18, extractor: 'string' },
-    companyRegistration: { start: 18, end: 32, extractor: 'string' },
-    companyName: { start: 72, end: 102, extractor: 'string' },
-    companyMessage: { start: 102, end: 142, extractor: 'string' },
-    bankName: { start: 142, end: 172, extractor: 'string' },
-    generationDate: { start: 143, end: 151, extractor: 'date' },
-    generationTime: { start: 151, end: 157, extractor: 'string' },
+    companyRegistration: { start: 18, end: 32, extractor: 'string', formatter: normalizeRegistration },
+    companyName: { start: 73, end: 103, extractor: 'string' },
+    companyMessage: { start: 106, end: 145, extractor: 'string' },
+    bankName: { start: 146, end: 185, extractor: 'string' },
+    generationDate: { start: 191, end: 199, extractor: 'date' },
+    generationTime: { start: 240, end: 240, extractor: 'string' }, // Campo não existe no Header do Lote de Retorno, retorna vazio
   },
 );
 

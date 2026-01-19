@@ -94,3 +94,20 @@ export function normalizeAccount(account: string): string | null {
 
   return numericValue.toString();
 }
+
+/**
+ * Normaliza CNPJ/CPF removendo zeros à esquerda desnecessários.
+ * Mantém o tamanho original se necessário para validação.
+ * @param registration - Número de inscrição (CNPJ ou CPF) como string
+ * @returns Inscrição normalizada
+ */
+export function normalizeRegistration(registration: string): string {
+  if (!registration || registration.trim().length === 0) return '';
+
+  const trimmed = registration.trim();
+
+  // Remove zeros à esquerda, mas mantém pelo menos 1 dígito se houver
+  const normalized = trimmed.replace(/^0+/, '') || '0';
+
+  return normalized;
+}
