@@ -22,5 +22,6 @@ coverage
 volumes/.test-temp
 volumes/.test-temp/**
 
+volumes/audit/**
 volumes/test/**
 !volumes/test/TEST_*.*
