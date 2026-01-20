@@ -20,7 +20,7 @@ export class ContentProcessor {
    * @returns Array de linhas
    */
   private static extractLines(content: string): string[] {
-    return content.split(/\r?\n/).filter(line => line.trim().length > 0);
+    return content.split(/\r?\n/).filter(line => line?.trim?.()?.length > 0);
   }
 
   /**
