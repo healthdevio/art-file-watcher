@@ -25,7 +25,7 @@ export class HeaderParser400 {
       bankName: this.substring(line, 79, 94).trim(), // Nome do banco (posição 79-93)
       companyName: this.substring(line, 46, 76).trim(), // Nome da empresa (posição 46-75)
       companyCode: this.substring(line, 26, 46), // Código da empresa (posição 26-45)
-      generationDate: formatDate(this.substring(line, 94, 100), 'DDMMAA'), // Data de geração (DDMMAA -> DD/MM/AA) (posição 94-99)
+      generationDate: formatDate(this.substring(line, 94, 100), 'DDMMAA'), // Data de geração (DDMMAA -> DD/MM/AAAA com ano expandido) (posição 94-99)
       reserved: this.substring(line, 100, 394), // Reservado
       fileSequence: this.substring(line, 394, 400), // Número sequencial do arquivo (posição 394-399)
     };

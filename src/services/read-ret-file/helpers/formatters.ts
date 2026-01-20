@@ -25,10 +25,11 @@ export function formatMonetaryValue(value: string): number {
 /**
  * Formata data do formato CNAB para formato brasileiro.
  * Suporta formatos DDMMAAAA (8 dígitos) e DDMMAA (6 dígitos).
+ * Para formato DDMMAA, expande automaticamente o ano para 4 dígitos (anos <= 50 → 20XX, anos > 50 → 19XX).
  *
  * @param value - Data em formato CNAB (DDMMAAAA ou DDMMAA)
  * @param format - Formato esperado da data ('DDMMAAAA' ou 'DDMMAA')
- * @returns Data formatada como string no formato DD/MM/AAAA ou DD/MM/AA
+ * @returns Data formatada como string no formato DD/MM/AAAA
  */
 export function formatDate(value: string, format: 'DDMMAAAA' | 'DDMMAA' = 'DDMMAAAA'): string {
   if (!value || value.trim().length === 0) return '';
@@ -43,12 +44,21 @@ export function formatDate(value: string, format: 'DDMMAAAA' | 'DDMMAA' = 'DDMMA
     const year = dateValue.substring(4, 8);
     return `${day}/${month}/${year}`;
   } else {
-    // Formato curto: DDMMAA (6 dígitos)
+    // Formato curto: DDMMAA (6 dígitos) - expande ano para 4 dígitos
     if (dateValue.length !== 6) return dateValue;
     const day = dateValue.substring(0, 2);
     const month = dateValue.substring(2, 4);
-    const year = dateValue.substring(4, 6);
-    return `${day}/${month}/${year}`;
+    const yearShort = dateValue.substring(4, 6);
+
+    // Expande ano: anos <= 50 são 20XX, anos > 50 são 19XX
+    const yearNum = parseInt(yearShort, 10);
+    const fullYear = isNaN(yearNum)
+      ? yearShort
+      : yearNum <= 50
+        ? `20${yearShort.padStart(2, '0')}`
+        : `19${yearShort.padStart(2, '0')}`;
+
+    return `${day}/${month}/${fullYear}`;
   }
 }
 

@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: postgres_audit_cnab
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Xof1RbkeRWFzeu8gekFn
+      POSTGRES_DB: audit_cnab
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:    

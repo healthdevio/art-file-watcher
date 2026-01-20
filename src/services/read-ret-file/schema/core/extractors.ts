@@ -68,18 +68,28 @@ export class FieldExtractors {
   }
 
   /**
-   * Formata data DDMMAA -> DD/MM/AA
+   * Formata data DDMMAA -> DD/MM/AAAA (expande ano automaticamente)
+   * Expande ano: anos <= 50 são 20XX, anos > 50 são 19XX
    * @param line - Linha do arquivo
    * @param start - Posição inicial (inclusive)
    * @param end - Posição final (exclusive)
-   * @returns Data formatada como string no formato DD/MM/AA
+   * @returns Data formatada como string no formato DD/MM/AAAA
    */
   static extractDateShort(line: string, start: number, end: number): string {
     const value = this.extractString(line, start, end);
     if (value.length !== 6) return value;
     const day = value.substring(0, 2);
     const month = value.substring(2, 4);
-    const year = value.substring(4, 6);
-    return `${day}/${month}/${year}`;
+    const yearShort = value.substring(4, 6);
+
+    // Expande ano: anos <= 50 são 20XX, anos > 50 são 19XX
+    const yearNum = parseInt(yearShort, 10);
+    const fullYear = isNaN(yearNum)
+      ? yearShort
+      : yearNum <= 50
+        ? `20${yearShort.padStart(2, '0')}`
+        : `19${yearShort.padStart(2, '0')}`;
+
+    return `${day}/${month}/${fullYear}`;
   }
 }

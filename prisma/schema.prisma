@@ -1,0 +1,78 @@
+// Schema temporário para auditoria de arquivos CNAB 240 - Dezembro 2025
+// Este schema será usado apenas para o script de extração de dados
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model AuditReturn {
+  id                    String   @id @default(uuid())
+  
+  // Identificação do arquivo
+  filePath              String   @db.Text
+  fileName              String
+  cnabType              String
+  lineNumber            Int
+  
+  // Banco e Convênio
+  bankCode              String
+  agreement             String
+  lotCode               String
+  
+  // Título
+  regionalNumber        String   // Nosso número
+  regionalNumberDigit   String
+  titleNumber           String?  @db.Text
+  titlePortfolio        String?
+  titleType             String?
+  
+  // Conta bancária
+  agency                String?
+  agencyDigit           String?
+  account               String?
+  accountDigit          String?
+  
+  // Pagador
+  payerName             String?  @db.Text
+  payerRegistration     String?
+  payerRegistrationType String?
+  
+  // Movimentação
+  movementCode          String   // Código de movimento retorno (ex: '06', '46')
+  occurrenceCode        String?  // Código da ocorrência
+  
+  // Valores do Segmento T
+  receivedValue         Decimal? @db.Decimal(15, 2) // Valor nominal do título
+  tariff                Decimal? @db.Decimal(15, 2)  // Tarifa/custas
+  
+  // Valores do Segmento U
+  accruedInterest       Decimal? @db.Decimal(15, 2) // Juros/multa/encargos
+  discountAmount        Decimal? @db.Decimal(15, 2)  // Desconto concedido
+  dischargeAmount       Decimal? @db.Decimal(15, 2)  // Abatimento concedido
+  paidAmount            Decimal? @db.Decimal(15, 2)  // Valor pago pelo pagador
+  otherExpenses         Decimal? @db.Decimal(15, 2)  // Outras despesas
+  otherCredits          Decimal? @db.Decimal(15, 2)  // Outros créditos
+  netCreditValue        Decimal? @db.Decimal(15, 2)  // Valor líquido a ser creditado (receivedValue do Segmento U)
+  
+  // Datas
+  paymentDate           DateTime? // Data da ocorrência (pagamento)
+  creditDate            DateTime? // Data do crédito
+  
+  // Metadados
+  fileGenerationDate    String?  // Data de geração do arquivo (formato original)
+  processedAt           DateTime @default(now())
+  
+  // Índices para consultas de auditoria
+  @@index([bankCode])
+  @@index([agreement])
+  @@index([movementCode])
+  @@index([creditDate])
+  @@index([paymentDate])
+  @@index([regionalNumber])
+  @@index([filePath])
+}
