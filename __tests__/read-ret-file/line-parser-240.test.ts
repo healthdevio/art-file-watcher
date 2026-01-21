@@ -240,8 +240,9 @@ describe('Formatters', () => {
       expect(formatDate('01012024', 'DDMMAAAA')).toBe('01/01/2024');
     });
 
-    it('deve formatar data no formato DDMMAA', () => {
-      expect(formatDate('150126', 'DDMMAA')).toBe('15/01/26');
+    it('deve formatar data no formato DDMMAA (com expansão de ano para 4 dígitos)', () => {
+      // A função agora expande o ano automaticamente: 26 <= 50 -> 2026
+      expect(formatDate('150126', 'DDMMAA')).toBe('15/01/2026');
     });
 
     it('deve retornar string vazia para data vazia', () => {

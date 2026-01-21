@@ -30,10 +30,10 @@ export class SchemaParser {
     validation: SchemaValidation,
   ): T | null {
     // Valida tamanho mínimo
-    if (line.length < validation.minLength) return null;
+    if (line?.length < validation?.minLength) return null;
 
     // Valida usando função customizada (se fornecida)
-    if (validation.validator && !validation.validator(line)) return null;
+    if (validation?.validator && !validation?.validator(line)) return null;
 
     // Extrai todos os campos do schema
     const result = {} as T;
@@ -69,7 +69,7 @@ export class SchemaParser {
         rawValue = FieldExtractors.extractDate(line, field.start, field.end);
         break;
       case 'date_short':
-        rawValue = FieldExtractors.extractDateShort(line, field.start, field.end);
+        rawValue = FieldExtractors.extractDate(line, field.start, field.end);
         break;
       default:
         rawValue = FieldExtractors.extractString(line, field.start, field.end);

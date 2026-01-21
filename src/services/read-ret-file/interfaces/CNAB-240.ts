@@ -101,7 +101,7 @@ export type SegmentoU = CommonRecordFields &
     /** Outros créditos */
     otherCredits: number;
     /** Código da ocorrência */
-    occurrenceCode: string;
+    // occurrenceCode?: string;
   };
 
 /**

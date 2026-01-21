@@ -1,7 +1,28 @@
+/**
+ * Utilitários de data para read-ret-file
+ * Versão do tryDate usando date-fns, mantendo desacoplamento de outros módulos do projeto
+ */
+
 import { isValid, parse, parseJSON } from 'date-fns';
-import { makeArray } from './array';
 
 type Func = typeof parseJSON;
+
+/**
+ * Helper para converter valor em array
+ */
+function makeArray<T = unknown>(value?: T | T[]): T[] {
+  if (!value) return [] as T[];
+  return !Array.isArray(value) ? [value] : value;
+}
+
+/**
+ * Tenta parsear uma string de data em vários formatos
+ * Versão do tryDate original adaptada para read-ret-file
+ *
+ * @param str - String de data ou Date object
+ * @param formats - Formatos adicionais a tentar (opcional)
+ * @returns Date válida ou null se inválida
+ */
 export function tryDate(str: Date | string, formats: string | string[] = []): Date | null {
   if (str instanceof Date) return str;
   const supportedList = [

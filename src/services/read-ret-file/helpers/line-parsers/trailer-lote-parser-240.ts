@@ -1,6 +1,6 @@
 import { CNAB240_MIN_LINE_LENGTH, CNAB240_RECORD_TYPES } from '../../constants';
 import { TrailerLoteCNAB240 } from '../../interfaces/CNAB-240';
-import { TRAILER_LOTE_SCHEMA } from '../../schema/cnab-240-schemas';
+import * as CNAB240 from '../../schema/cnab-240';
 import { FieldExtractors } from '../../schema/core/extractors';
 import { SchemaParser } from '../../schema/core/parser';
 
@@ -9,11 +9,12 @@ export class TrailerLoteParser240 {
   /**
    * Extrai dados do trailer do lote.
    * @param line - Linha do arquivo
-   * @param _version - Versão do CNAB 240 ('030' ou '040') - não usado, mas mantido para compatibilidade
+   * @param version - Versão do CNAB 240 ('030' ou '040') - preservada para identificação, mas não afeta o schema
    * @returns Trailer do lote parseado ou null se inválido
    */
   static parse(line: string, _version: '030' | '040'): TrailerLoteCNAB240 | null {
-    return SchemaParser.parse<TrailerLoteCNAB240>(line, TRAILER_LOTE_SCHEMA, {
+    const schema = CNAB240.TRAILER_LOTE_SCHEMA;
+    return SchemaParser.parse<TrailerLoteCNAB240>(line, schema, {
       minLength: CNAB240_MIN_LINE_LENGTH,
       validator: l => {
         const recordType = FieldExtractors.extractString(l, 7, 8);

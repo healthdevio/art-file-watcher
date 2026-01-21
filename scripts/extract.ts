@@ -10,7 +10,7 @@
  */
 
 import { PrismaClient } from '@prisma/client';
-import { appendFileSync, existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import type { CNAB240, SegmentoT, SegmentoU } from '../src/services/read-ret-file/interfaces/CNAB-240';
 import type { CNAB400, DetalheCNAB400 } from '../src/services/read-ret-file/interfaces/CNAB-400';
@@ -21,6 +21,23 @@ const AUDIT_DIR = resolve(__dirname, '../volumes/audit/2025-12');
 const OUTPUT_DIR_SUFFIX = 'output'; // Não usado - salvamos no mesmo diretório
 const LOG_DIR = resolve(__dirname, '../volumes/audit/logs');
 const LOG_FILE = join(LOG_DIR, `errors_${new Date().toISOString().split('T')[0]}.log`);
+
+// Limpar arquivo de log no início de cada execução para evitar duplicação entre execuções
+if (!existsSync(LOG_DIR)) {
+  mkdirSync(LOG_DIR, { recursive: true });
+}
+if (existsSync(LOG_FILE)) {
+  writeFileSync(LOG_FILE, '', 'utf-8');
+}
+
+// Inicializar arquivo de log (limpar se existir para evitar duplicação entre execuções)
+if (!existsSync(LOG_DIR)) {
+  mkdirSync(LOG_DIR, { recursive: true });
+}
+// Limpar arquivo de log no início de cada execução
+if (existsSync(LOG_FILE)) {
+  writeFileSync(LOG_FILE, '', 'utf-8');
+}
 
 // Extensões de arquivos CNAB conhecidas
 const CNAB_EXTENSIONS = ['.RET', '.A2T9R5', '.A2U7F4', '.A2U1W8', '.ret', '.a2t9r5', '.a2u7f4', '.a2u1w8'];
@@ -47,26 +64,64 @@ const stats: ProcessingStats = {
   errors: [],
 };
 
+// Set para rastrear mensagens já logadas e evitar duplicação
+const loggedMessages = new Set<string>();
+
 /**
  * Escreve um erro no arquivo de log e no console
+ * Evita duplicação verificando se a mensagem já foi logada nesta execução
+ * Também verifica se já existe no arquivo para evitar duplicação entre execuções
  */
 function logError(fileName: string, error: string): void {
-  // Exibir no console
-  console.error(`  ✗ ${fileName}: ${error}`);
+  // Criar chave única para evitar duplicação dentro da mesma execução
+  const messageKey = `${fileName}|${error}`;
+  
+  // Se já foi logado nesta execução, não logar novamente
+  if (loggedMessages.has(messageKey)) {
+    return;
+  }
+  
+  // Verificar se já existe no arquivo (para evitar duplicação entre execuções)
+  try {
+    if (existsSync(LOG_FILE)) {
+      const fileContent = readFileSync(LOG_FILE, 'utf-8');
+      const searchPattern = `${fileName} | ${error}`;
+      if (fileContent.includes(searchPattern)) {
+        // Já existe no arquivo, apenas marcar como logado e não escrever novamente
+        loggedMessages.add(messageKey);
+        console.error(`  ✗ ${fileName}: ${error}`);
+        return;
+      }
+    }
+  } catch {
+    // Se falhar ao ler arquivo, continuar normalmente
+  }
+  
+  // Marcar como logado ANTES de escrever para evitar race conditions
+  loggedMessages.add(messageKey);
   
   try {
-    // Criar diretório de logs se não existir
+    // Garantir que o diretório existe
     if (!existsSync(LOG_DIR)) {
       mkdirSync(LOG_DIR, { recursive: true });
     }
     
+    // Escrever no arquivo apenas uma vez
     const timestamp = new Date().toISOString();
     const logLine = `[${timestamp}] ${fileName} | ${error}\n`;
     
     appendFileSync(LOG_FILE, logLine, 'utf-8');
-  } catch (logError) {
-    // Se falhar ao escrever log, apenas imprime no console
-    console.error('Erro ao escrever log:', logError);
+    
+    // Exibir no console apenas após escrever no arquivo com sucesso
+    console.error(`  ✗ ${fileName}: ${error}`);
+  } catch (logErr) {
+    // Se falhar ao escrever log, apenas imprime no console (sem duplicar)
+    const errorKey = `LOG_WRITE_ERROR|${fileName}|${error}`;
+    if (!loggedMessages.has(errorKey)) {
+      loggedMessages.add(errorKey);
+      console.error(`  ✗ ${fileName}: ${error}`);
+      console.error('Erro ao escrever log:', logErr);
+    }
   }
 }
 
@@ -442,18 +497,18 @@ async function insertCNAB240RecordsToDatabase(
       movementCode: segmentT.movementCode,
       occurrenceCode: segmentU.occurrenceCode || null,
       
-      // Valores do Segmento T
-      receivedValue: segmentT.receivedValue || null,
-      tariff: segmentT.tariff || null,
+      // Valores do Segmento T - confiando totalmente no serviço read-ret-file
+      receivedValue: segmentT.receivedValue ?? null,
+      tariff: segmentT.tariff ?? null,
       
-      // Valores do Segmento U
-      accruedInterest: segmentU.accruedInterest || null,
-      discountAmount: segmentU.discountAmount || null,
-      dischargeAmount: segmentU.dischargeAmount || null,
-      paidAmount: segmentU.paidAmount || null,
-      otherExpenses: segmentU.otherExpenses || null,
-      otherCredits: segmentU.otherCredits || null,
-      netCreditValue: segmentU.receivedValue || null, // Valor líquido creditado
+      // Valores do Segmento U - confiando totalmente no serviço read-ret-file
+      accruedInterest: segmentU.accruedInterest ?? null,
+      discountAmount: segmentU.discountAmount ?? null,
+      dischargeAmount: segmentU.dischargeAmount ?? null,
+      paidAmount: segmentU.paidAmount ?? null,
+      otherExpenses: segmentU.otherExpenses ?? null,
+      otherCredits: segmentU.otherCredits ?? null,
+      netCreditValue: segmentU.receivedValue ?? null, // Valor líquido creditado
       
       // Datas
       paymentDate: parseCnabDate(segmentU.paymentDate),

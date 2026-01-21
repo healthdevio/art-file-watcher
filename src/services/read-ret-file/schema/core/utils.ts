@@ -19,3 +19,6 @@ export function combineSchemas<T extends Record<string, unknown>>(...schemas: Ar
   }
   return result;
 }
+
+// Re-export date utilities
+export * from './date-utils';

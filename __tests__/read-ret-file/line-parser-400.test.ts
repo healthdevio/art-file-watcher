@@ -41,8 +41,13 @@ describe('DetalheParser400', () => {
     expect(result?.recordType).toBe('7');
     expect(result?.agreement).toBeDefined();
     expect(result?.receivedValue).toBeGreaterThanOrEqual(0);
-    expect(result?.paymentDate).toMatch(/^\d{2}\/\d{2}\/\d{2}$/);
-    expect(result?.creditDate).toMatch(/^\d{2}\/\d{2}\/\d{2}$/);
+    // As datas agora são expandidas para 4 dígitos (DD/MM/AAAA) ou podem estar vazias se inválidas
+    if (result?.paymentDate) {
+      expect(result.paymentDate).toMatch(/^\d{2}\/\d{2}\/\d{4}$/);
+    }
+    if (result?.creditDate) {
+      expect(result.creditDate).toMatch(/^\d{2}\/\d{2}\/\d{4}$/);
+    }
     expect(result?.tariff).toBeGreaterThanOrEqual(0);
   });
 

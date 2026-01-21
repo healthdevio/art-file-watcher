@@ -127,12 +127,12 @@ describe('HeaderParser400', () => {
       expect(header.serviceType).toBe('RETORNO');
     });
 
-    it('deve formatar generationDate corretamente (DD/MM/AA)', () => {
+    it('deve formatar generationDate corretamente (DD/MM/AAAA com ano expandido)', () => {
       const header = HeaderParser400.parse(CNAB400_FIRST_LINE);
       // A data na linha de teste é "150126" (posição 94-100)
-      // Deve ser formatada como "15/01/26"
-      expect(header.generationDate).toMatch(/^\d{2}\/\d{2}\/\d{2}$/);
-      expect(header.generationDate).toBe('15/01/26');
+      // Deve ser formatada como "15/01/2026" (ano expandido: 26 <= 50 -> 2026)
+      expect(header.generationDate).toMatch(/^\d{2}\/\d{2}\/\d{4}$/);
+      expect(header.generationDate).toBe('15/01/2026');
     });
   });
 });
