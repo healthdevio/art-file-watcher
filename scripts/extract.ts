@@ -10,15 +10,18 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import { createHash } from 'crypto';
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
+import PQueue from 'p-queue';
+import { generateFileHash } from '../src/services/file-hash';
 import type { CNAB240, SegmentoT, SegmentoU } from '../src/services/read-ret-file/interfaces/CNAB-240';
 import type { CNAB400, DetalheCNAB400 } from '../src/services/read-ret-file/interfaces/CNAB-400';
 import { ReadRetFileService } from '../src/services/read-ret-file/read-ret-file.service';
+import { adjustToBrasiliaTimezone, tryDate } from '../src/services/read-ret-file/schema/core/date-utils';
 
 // Configurações hardcoded conforme especificado
-const AUDIT_DIR = resolve(__dirname, '../volumes/audit/2025-12');
-const OUTPUT_DIR_SUFFIX = 'output'; // Não usado - salvamos no mesmo diretório
+const AUDIT_DIR = resolve(__dirname, '../volumes/audit/2026-01-22');
 const LOG_DIR = resolve(__dirname, '../volumes/audit/logs');
 const LOG_FILE = join(LOG_DIR, `errors_${new Date().toISOString().split('T')[0]}.log`);
 
@@ -41,6 +44,96 @@ if (existsSync(LOG_FILE)) {
 
 // Extensões de arquivos CNAB conhecidas
 const CNAB_EXTENSIONS = ['.RET', '.A2T9R5', '.A2U7F4', '.A2U1W8', '.ret', '.a2t9r5', '.a2u7f4', '.a2u1w8'];
+
+// Filtro de tipo de arquivo para processar
+// Valores possíveis: 'CNAB400' | 'CNAB240' | 'ALL'
+// Altere apenas esta linha para mudar o filtro
+const FILE_TYPE_FILTER: 'CNAB400' | 'CNAB240' | 'ALL' = 'ALL';
+
+const agreementToRegional = [
+  { agreement: '73356', regional: 'MS' },
+  { agreement: '234757', regional: 'BA' },
+  { agreement: '81294', regional: 'PR' },
+  { agreement: '52996', regional: 'ES' },
+  { agreement: '2835965', regional: 'AC' },
+  { agreement: '2835375', regional: 'AL' },
+{ agreement: '2909128', regional: 'AM' },
+{ agreement: '2828039', regional: 'AP' },
+{ agreement: '2848659', regional: 'DF' },
+{ agreement: '3726559', regional: 'CE' },
+{ agreement: '3632840', regional: 'ES' },
+{ agreement: '2832069', regional: 'GO' },
+{ agreement: '3711056', regional: 'MA' },
+{ agreement: '2832133', regional: 'MG' },
+{ agreement: '3704138', regional: 'MT' },
+{ agreement: '3643071', regional: 'RN' },
+{ agreement: '3402948', regional: 'PB' },
+{ agreement: '2810159', regional: 'PE' },
+{ agreement: '2810627', regional: 'PI' },
+{ agreement: '3650623', regional: 'PR' },
+{ agreement: '2807857', regional: 'RJ' },
+{ agreement: '3618432', regional: 'RO' },
+{ agreement: '3556968', regional: 'RR' },
+{ agreement: '3398378', regional: 'TO' },
+{ agreement: '054743', regional: 'CE' },
+{ agreement: '052261', regional: 'MA' },
+{ agreement: '220180', regional: 'RN' },
+{ agreement: '051316', regional: 'SE' },
+{ agreement: '081298', regional: '' },
+{ agreement: '082036', regional: ''},
+{ agreement: '051159', regional: ''},
+{ agreement: '054067', regional: ''},
+{ agreement: '051367', regional: ''},
+{ agreement: '076882', regional: ''},
+{ agreement: '2803079', regional: ''},
+{ agreement: '220172', regional: ''},
+{ agreement: '3751520', regional: ''},
+{ agreement: '3751521', regional: ''},
+{ agreement: '3751530', regional: ''},
+{ agreement: '3751535', regional: ''},
+{ agreement: '3751542', regional: ''},
+{ agreement: '3751538', regional: ''},
+{ agreement: '3751544', regional: ''},
+{ agreement: '3751546', regional: ''},
+{ agreement: '3751547', regional: ''},
+{ agreement: '3751550', regional: ''},
+{ agreement: '3751549', regional: ''},
+{ agreement: '3751551', regional: ''},
+{ agreement: '3751552', regional: ''},
+{ agreement: '3751554', regional: ''},
+{ agreement: '3751557', regional: ''},
+{ agreement: '3751558', regional: ''},
+{ agreement: '3751563', regional: ''},
+{ agreement: '3751562', regional: ''},
+{ agreement: '2808666', regional: ''},
+{ agreement: '2811856', regional: ''},
+{ agreement: '2812778', regional: ''},
+{ agreement: '2812861', regional: ''},
+{ agreement: '2814902', regional: ''},
+{ agreement: '2820878', regional: ''},
+{ agreement: '2822201', regional: ''},
+{ agreement: '2826443', regional: ''},
+{ agreement: '2891862', regional: '' },
+{ agreement: '052358', regional: '' },
+{ agreement: '051317', regional: '' },
+{ agreement: '3085950', regional: '' },
+{ agreement: '054074', regional: '' },
+{ agreement: '219695', regional: '' },
+{ agreement: '081052', regional: '' },
+{ agreement: '052360', regional: '' },
+]
+
+/**
+ * Busca a regional baseada no código do convênio
+ * @param agreement - Código do convênio
+ * @returns Código da regional ou string vazia se não encontrado
+ */
+function getRegionalByAgreement(agreement: string | null | undefined): string {
+  if (!agreement) return '';
+  
+  const mapping = agreementToRegional.find(m => m.agreement === agreement);
+  return mapping?.regional || '--';
+}
 
 // Inicializar Prisma Client
 const prisma = new PrismaClient();
@@ -66,6 +159,42 @@ const stats: ProcessingStats = {
 
 // Set para rastrear mensagens já logadas e evitar duplicação
 const loggedMessages = new Set<string>();
+
+// Cache de hashes de arquivos para evitar recalcular
+const fileHashCache = new Map<string, string>();
+
+// Fila para limitar concorrência de upserts (evitar esgotar pool de conexões)
+const UPSERT_CONCURRENCY = 8; // Limitar a 10 upserts simultâneos
+
+/**
+ * Gera hash único para um registro baseado no hash do arquivo + número da linha
+ * 
+ * @param fileHash - Hash SHA256 do arquivo
+ * @param lineNumber - Número da linha no arquivo
+ * @returns Hash único do registro (SHA256)
+ */
+function generateRecordHash(fileHash: string, lineNumber: number): string {
+  const hash = createHash('sha256');
+  hash.update(fileHash);
+  hash.update(String(lineNumber));
+  return hash.digest('hex');
+}
+
+/**
+ * Obtém o hash do arquivo (usando cache para evitar recalcular)
+ * 
+ * @param filePath - Caminho do arquivo
+ * @returns Hash SHA256 do arquivo
+ */
+async function getFileHash(filePath: string): Promise<string> {
+  if (fileHashCache.has(filePath)) {
+    return fileHashCache.get(filePath)!;
+  }
+  
+  const hashResult = await generateFileHash(filePath);
+  fileHashCache.set(filePath, hashResult.fileHash);
+  return hashResult.fileHash;
+}
 
 /**
  * Escreve um erro no arquivo de log e no console
@@ -190,50 +319,22 @@ function expandYear(dateStr: string): string {
 /**
  * Converte data do formato CNAB para Date
  * Aceita formatos: DD/MM/YYYY ou DDMMAAAA
+ * Ajusta automaticamente para o fuso horário de Brasília (UTC-3)
  */
 function parseCnabDate(dateStr: string | null | undefined): Date | null {
   if (!dateStr || dateStr.trim() === '' || dateStr === '00000000' || dateStr === '        ') {
     return null;
   }
-  
-  // Formato esperado: DD/MM/YYYY (já vem formatado do parser)
-  // Ou DDMMAAAA (formato raw)
-  let day: string, month: string, year: string;
-  
+
   const trimmed = dateStr.trim();
-  
-  if (trimmed.includes('/')) {
-    // Formato DD/MM/YYYY
-    const parts = trimmed.split('/');
-    if (parts.length !== 3) return null;
-    day = parts[0].padStart(2, '0');
-    month = parts[1].padStart(2, '0');
-    year = parts[2];
-  } else {
-    // Formato DDMMAAAA
-    if (trimmed.length !== 8) return null;
-    day = trimmed.substring(0, 2);
-    month = trimmed.substring(2, 4);
-    year = trimmed.substring(4, 8);
-  }
-  
-  // Validar valores
-  const dayNum = parseInt(day, 10);
-  const monthNum = parseInt(month, 10);
-  const yearNum = parseInt(year, 10);
-  
-  if (isNaN(dayNum) || isNaN(monthNum) || isNaN(yearNum)) {
-    return null;
-  }
-  
-  if (dayNum < 1 || dayNum > 31 || monthNum < 1 || monthNum > 12 || yearNum < 1900) {
-    return null;
-  }
-  
-  const date = new Date(`${year}-${month}-${day}`);
-  if (isNaN(date.getTime())) return null;
-  
-  return date;
+
+  // Tentar parsear com tryDate (suporta dd/MM/yyyy e ddMMyyyy)
+  const parsedDate = trimmed.includes('/')
+    ? tryDate(trimmed, 'dd/MM/yyyy')
+    : tryDate(trimmed, 'ddMMyyyy');
+
+  // Ajustar para fuso horário de Brasília (UTC-3)
+  return adjustToBrasiliaTimezone(parsedDate);
 }
 
 /**
@@ -349,8 +450,11 @@ async function processCNAB240File(
   
   writeFileSync(jsonPath, JSON.stringify(jsonData, null, 2), 'utf-8');
   
+  // Obter hash do arquivo
+  const fileHash = await getFileHash(filePath);
+  
   // Inserir registros no banco
-  await insertCNAB240RecordsToDatabase(filePath, fileName, result.cnabType, cnabData.header.generationDate, tuPairs);
+  await insertCNAB240RecordsToDatabase(fileName, result.cnabType, cnabData.header.generationDate, tuPairs, fileHash);
   
   stats.processedFiles++;
   stats.totalRecords += tuPairs.length;
@@ -402,8 +506,11 @@ async function processCNAB400File(
   
   writeFileSync(jsonPath, JSON.stringify(jsonData, null, 2), 'utf-8');
   
+  // Obter hash do arquivo
+  const fileHash = await getFileHash(filePath);
+  
   // Inserir registros no banco
-  await insertCNAB400RecordsToDatabase(filePath, fileName, result.cnabType, cnabData.header, detalhes);
+  await insertCNAB400RecordsToDatabase(fileName, result.cnabType, cnabData.header, detalhes, fileHash);
   
   stats.processedFiles++;
   stats.totalRecords += detalhes.length;
@@ -432,14 +539,28 @@ async function processFile(filePath: string): Promise<void> {
       return;
     }
     
+    // Aplicar filtro de tipo de arquivo
+    const isCNAB240 = result.cnabType === 'CNAB240_30' || result.cnabType === 'CNAB240_40';
+    const isCNAB400 = result.cnabType === 'CNAB400';
+    
+    if (FILE_TYPE_FILTER === 'CNAB400' && !isCNAB400) {
+      // console.log(`  ⊘ ${fileName}: Pulando (filtro: apenas CNAB 400)`);
+      return;
+    }
+    
+    if (FILE_TYPE_FILTER === 'CNAB240' && !isCNAB240) {
+      // console.log(`  ⊘ ${fileName}: Pulando (filtro: apenas CNAB 240)`);
+      return;
+    }
+    
     // Processar CNAB 240
-    if (result.cnabType === 'CNAB240_30' || result.cnabType === 'CNAB240_40') {
+    if (isCNAB240) {
       await processCNAB240File(filePath, fileName, result, result.data as CNAB240);
       return;
     }
     
     // Processar CNAB 400
-    if (result.cnabType === 'CNAB400') {
+    if (isCNAB400) {
       await processCNAB400File(filePath, fileName, result, result.data as CNAB400);
       return;
     }
@@ -455,24 +576,27 @@ async function processFile(filePath: string): Promise<void> {
  * Insere registros CNAB 240 no banco de dados
  */
 async function insertCNAB240RecordsToDatabase(
-  filePath: string,
   fileName: string,
   cnabType: string,
   fileGenerationDate: string | undefined,
-  tuPairs: Array<{ segmentT: SegmentoT; segmentU: SegmentoU; lineNumber: number }>
+  tuPairs: Array<{ segmentT: SegmentoT; segmentU: SegmentoU; lineNumber: number }>,
+  fileHash: string
 ): Promise<void> {
   const records = tuPairs.map(pair => {
     const { segmentT, segmentU, lineNumber } = pair;
+    const recordHash = generateRecordHash(fileHash, lineNumber);
+    const agreement = segmentT.agreement;
     
     return {
-      filePath,
+      recordHash,
+      regional: getRegionalByAgreement(agreement),
       fileName,
       cnabType,
       lineNumber,
       
       // Banco e Convênio
       bankCode: segmentT.bankCode,
-      agreement: segmentT.agreement,
+      agreement,
       lotCode: segmentT.lotCode,
       
       // Título
@@ -495,7 +619,7 @@ async function insertCNAB240RecordsToDatabase(
       
       // Movimentação
       movementCode: segmentT.movementCode,
-      occurrenceCode: segmentU.occurrenceCode || null,
+      occurrenceCode: null, // occurrenceCode não está disponível no SegmentoU
       
       // Valores do Segmento T - confiando totalmente no serviço read-ret-file
       receivedValue: segmentT.receivedValue ?? null,
@@ -519,58 +643,63 @@ async function insertCNAB240RecordsToDatabase(
     };
   });
   
-  // Inserir em lote
-  try {
-    await prisma.auditReturn.createMany({
-      data: records,
-      skipDuplicates: true, // Evitar duplicatas baseado em índices únicos se houver
-    });
-    
-    stats.insertedRecords += records.length;
-    console.log(`  ✓ ${records.length} registros inseridos no banco`);
-  } catch (error) {
-    // Se falhar inserção em lote, tentar individualmente
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    console.log(`  ⚠️  Erro em inserção em lote, tentando individualmente...`);
-    logError(fileName, `Erro em inserção em lote: ${errorMsg}`);
-    let inserted = 0;
-    
-    for (const record of records) {
+  // Inserir/atualizar usando upsert com concorrência limitada (evita esgotar pool de conexões)
+  const queue = new PQueue({ concurrency: UPSERT_CONCURRENCY });
+  let upserted = 0;
+  let errors = 0;
+  
+  // Adicionar todos os upserts na fila com concorrência limitada
+  const upsertPromises = records.map((record) =>
+    queue.add(async () => {
       try {
-        await prisma.auditReturn.create({ data: record });
-        inserted++;
+        await prisma.auditReturn.upsert({
+          where: { recordHash: record.recordHash },
+          update: record, // Atualiza se já existir
+          create: record, // Cria se não existir
+        });
+        upserted++;
+        return { success: true };
       } catch (err) {
+        errors++;
         const errorMsg = err instanceof Error ? err.message : String(err);
-        logError(fileName, `Erro ao inserir registro linha ${record.lineNumber}: ${errorMsg}`);
+        logError(fileName, `Erro ao fazer upsert registro linha ${record.lineNumber}: ${errorMsg}`);
+        return { success: false };
       }
-    }
-    
-    stats.insertedRecords += inserted;
-    console.log(`  ✓ ${inserted}/${records.length} registros inseridos`);
-  }
+    })
+  );
+  
+  // Aguardar todos os upserts completarem
+  await Promise.all(upsertPromises);
+  
+  stats.insertedRecords += upserted;
+  console.log(`  ✓ ${upserted}/${records.length} registros processados${errors > 0 ? ` (${errors} erros)` : ''}`);
 }
 
 /**
  * Insere registros CNAB 400 no banco de dados
  */
 async function insertCNAB400RecordsToDatabase(
-  filePath: string,
   fileName: string,
   cnabType: string,
   header: CNAB400['header'],
-  detalhes: Array<{ detalhe: DetalheCNAB400; lineNumber: number }>
+  detalhes: Array<{ detalhe: DetalheCNAB400; lineNumber: number }>,
+  fileHash: string
 ): Promise<void> {
   const records = detalhes.map(({ detalhe, lineNumber }) => {
+    const recordHash = generateRecordHash(fileHash, lineNumber);
+    const agreement = detalhe.agreement;
+    
     // CNAB 400 não tem alguns campos do CNAB 240, então usamos null
     return {
-      filePath,
+      recordHash,
+      regional: getRegionalByAgreement(agreement),
       fileName,
       cnabType,
       lineNumber,
       
       // Banco e Convênio
       bankCode: header.bankCode || '',
-      agreement: detalhe.agreement,
+      agreement,
       lotCode: '', // CNAB 400 não tem lote
       
       // Título
@@ -591,8 +720,8 @@ async function insertCNAB400RecordsToDatabase(
       payerRegistration: null,
       payerRegistrationType: null,
       
-      // Movimentação - CNAB 400 não tem código de movimento separado
-      movementCode: '', // Vazio para CNAB 400
+      // Movimentação
+      movementCode: detalhe.movementCode || '',
       occurrenceCode: null,
       
       // Valores do Segmento T (CNAB 400 tem apenas receivedValue e tariff)
@@ -617,35 +746,36 @@ async function insertCNAB400RecordsToDatabase(
     };
   });
   
-  // Inserir em lote
-  try {
-    await prisma.auditReturn.createMany({
-      data: records,
-      skipDuplicates: true,
-    });
-    
-    stats.insertedRecords += records.length;
-    console.log(`  ✓ ${records.length} registros inseridos no banco`);
-  } catch (error) {
-    // Se falhar inserção em lote, tentar individualmente
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    console.log(`  ⚠️  Erro em inserção em lote, tentando individualmente...`);
-    logError(fileName, `Erro em inserção em lote: ${errorMsg}`);
-    let inserted = 0;
-    
-    for (const record of records) {
+  // Inserir/atualizar usando upsert com concorrência limitada (evita esgotar pool de conexões)
+  const queue = new PQueue({ concurrency: UPSERT_CONCURRENCY });
+  let upserted = 0;
+  let errors = 0;
+  
+  // Adicionar todos os upserts na fila com concorrência limitada
+  const upsertPromises = records.map((record) =>
+    queue.add(async () => {
       try {
-        await prisma.auditReturn.create({ data: record });
-        inserted++;
+        await prisma.auditReturn.upsert({
+          where: { recordHash: record.recordHash },
+          update: record, // Atualiza se já existir
+          create: record, // Cria se não existir
+        });
+        upserted++;
+        return { success: true };
       } catch (err) {
+        errors++;
         const errorMsg = err instanceof Error ? err.message : String(err);
-        logError(fileName, `Erro ao inserir registro linha ${record.lineNumber}: ${errorMsg}`);
+        logError(fileName, `Erro ao fazer upsert registro linha ${record.lineNumber}: ${errorMsg}`);
+        return { success: false };
       }
-    }
-    
-    stats.insertedRecords += inserted;
-    console.log(`  ✓ ${inserted}/${records.length} registros inseridos`);
-  }
+    })
+  );
+  
+  // Aguardar todos os upserts completarem
+  await Promise.all(upsertPromises);
+  
+  stats.insertedRecords += upserted;
+  console.log(`  ✓ ${upserted}/${records.length} registros processados${errors > 0 ? ` (${errors} erros)` : ''}`);
 }
 
 /**

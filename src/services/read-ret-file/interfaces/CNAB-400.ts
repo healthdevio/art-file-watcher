@@ -19,7 +19,10 @@ export type DetalheCNAB400 = CommonRecordFields &
   CommonRegionalNumberFields &
   CommonPaymentDateFields &
   CommonMonetaryFields &
-  CommonSequenceFields;
+  CommonSequenceFields & {
+    /** Código de movimentação (posição 108-110) */
+    movementCode: string;
+  };
 
 /**
  * Trailer do arquivo CNAB 400 (tipo de registro 9)

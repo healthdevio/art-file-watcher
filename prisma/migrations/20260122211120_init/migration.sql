@@ -1,7 +1,8 @@
 -- CreateTable
 CREATE TABLE "AuditReturn" (
     "id" TEXT NOT NULL,
-    "filePath" TEXT NOT NULL,
+    "recordHash" TEXT NOT NULL,
+    "regional" VARCHAR(2) NOT NULL,
     "fileName" TEXT NOT NULL,
     "cnabType" TEXT NOT NULL,
     "lineNumber" INTEGER NOT NULL,
@@ -40,6 +41,9 @@ CREATE TABLE "AuditReturn" (
 );
 
 -- CreateIndex
+CREATE UNIQUE INDEX "AuditReturn_recordHash_key" ON "AuditReturn"("recordHash");
+
+-- CreateIndex
 CREATE INDEX "AuditReturn_bankCode_idx" ON "AuditReturn"("bankCode");
 
 -- CreateIndex
@@ -58,4 +62,4 @@ CREATE INDEX "AuditReturn_paymentDate_idx" ON "AuditReturn"("paymentDate");
 CREATE INDEX "AuditReturn_regionalNumber_idx" ON "AuditReturn"("regionalNumber");
 
 -- CreateIndex
-CREATE INDEX "AuditReturn_filePath_idx" ON "AuditReturn"("filePath");
+CREATE INDEX "AuditReturn_regional_idx" ON "AuditReturn"("regional");

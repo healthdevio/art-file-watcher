@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { tryDate } from './date-utils';
+import { adjustToBrasiliaTimezone, tryDate } from './date-utils';
 
 /**
  * Extractors built-in para parsing de campos
@@ -55,8 +55,8 @@ export class FieldExtractors {
 
   /**
    * Formata data DDMMAAAA -> DD/MM/AAAA
-   * Valida se a data é válida usando tryDate antes de formatar
    * IMPORTANTE: Não usa trim() na extração para preservar zeros à esquerda
+   * IMPORTANTE: Ajusta o fuso horário para Brasília (UTC-3) após o parse
    *
    * @param line - Linha do arquivo
    * @param start - Posição inicial (inclusive)
@@ -64,7 +64,6 @@ export class FieldExtractors {
    * @returns Data formatada como string no formato DD/MM/AAAA ou string vazia se inválida
    */
   static extractDate(line: string, start: number, end: number): string {
-    // Extrair sem trim para preservar zeros à esquerda
     if (start < 0 || end < 0 || start > end) return '';
     if (start >= line.length) return '';
     if (end > line.length) return '';
@@ -72,11 +71,8 @@ export class FieldExtractors {
     const value = line.substring(start, end);
     if (value.length !== 8) return '';
 
-    // Verificar se é apenas zeros ou espaços (data inválida)
-    // if (/^0+$/.test(value) || /^\s+$/.test(value)) return '';
-
-    // Tentar parsear usando tryDate com formato ddMMyyyy
-    const date = tryDate(value, 'ddMMyyyy');
+    const parsedDate = tryDate(value, 'ddMMyyyy');
+    const date = adjustToBrasiliaTimezone(parsedDate);
     if (!date) return '';
 
     return format(date, 'dd/MM/yyyy');
@@ -85,8 +81,8 @@ export class FieldExtractors {
   /**
    * Formata data DDMMAA -> DD/MM/AAAA (expande ano automaticamente)
    * Expande ano: anos <= 50 são 20XX, anos > 50 são 19XX
-   * Valida se a data é válida usando tryDate antes de formatar
    * IMPORTANTE: Não usa trim() na extração para preservar zeros à esquerda
+   * IMPORTANTE: Ajusta o fuso horário para Brasília (UTC-3) após o parse
    *
    * @param line - Linha do arquivo
    * @param start - Posição inicial (inclusive)
@@ -94,7 +90,6 @@ export class FieldExtractors {
    * @returns Data formatada como string no formato DD/MM/AAAA ou string vazia se inválida
    */
   static extractDateShort(line: string, start: number, end: number): string {
-    // Extrair sem trim para preservar zeros à esquerda
     if (start < 0 || end < 0 || start > end) return '';
     if (start >= line.length) return '';
     if (end > line.length) return '';
@@ -102,21 +97,13 @@ export class FieldExtractors {
     const value = line.substring(start, end);
     if (value.length !== 6) return '';
 
-    // Verificar se é apenas zeros ou espaços (data inválida)
-    if (/^0+$/.test(value) || /^\s+$/.test(value)) return '';
-
-    const day = value.substring(0, 2);
-    const month = value.substring(2, 4);
-    const yearShort = value.substring(4, 6);
-
-    // Tentar parsear usando tryDate com formato ddMMyy (expande ano automaticamente)
-    const date = tryDate(value, 'ddMMyy');
+    const parsedDate = tryDate(value, ['ddMMyy', 'ddMMyyyy']);
+    const date = adjustToBrasiliaTimezone(parsedDate);
+    // console.log('\n\nvalue', value);
+    // console.log('date', date);
+    // console.log('parsedDate', parsedDate, '\n\n');
     if (!date) return '';
 
-    // Expande ano: anos <= 50 são 20XX, anos > 50 são 19XX
-    const yearShortNum = parseInt(yearShort, 10);
-    const fullYear = yearShortNum <= 50 ? `20${yearShort.padStart(2, '0')}` : `19${yearShort.padStart(2, '0')}`;
-
-    return `${day}/${month}/${fullYear}`;
+    return format(date, 'dd/MM/yyyy');
   }
 }

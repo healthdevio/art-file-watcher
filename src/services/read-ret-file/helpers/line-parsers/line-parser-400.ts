@@ -1,6 +1,6 @@
 import { LineCNAB400Payload } from '../../interfaces/CNAB-400';
 import { LineTypeIdentifier400 } from '../line-type-identifier-400';
-import { DetalheParser400 } from './detalhe-parser-400';
+import { DetailsParser400 } from './details-parser-400';
 import { TrailerArquivoParser400 } from './trailer-arquivo-parser-400';
 
 /**
@@ -16,7 +16,7 @@ export class LineParser400 {
   static parse(line: string): LineCNAB400Payload | null {
     const lineType = LineTypeIdentifier400.identify(line);
     const parsers = {
-      DETALHE: () => DetalheParser400.parse(line),
+      DETALHE: () => DetailsParser400.parse(line),
       TRAILER_ARQUIVO: () => TrailerArquivoParser400.parse(line),
     };
 

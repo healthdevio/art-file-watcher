@@ -5,7 +5,7 @@ import { FieldExtractors } from '../../schema/core/extractors';
 import { SchemaParser } from '../../schema/core/parser';
 
 /** Parser para linha de detalhe CNAB 400 (tipo de registro 7). */
-export class DetalheParser400 {
+export class DetailsParser400 {
   /**
    * Extrai dados da linha de detalhe.
    * @param line - Linha do arquivo

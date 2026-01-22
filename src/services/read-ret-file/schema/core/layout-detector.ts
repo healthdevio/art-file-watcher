@@ -1,4 +1,4 @@
-import { tryDate } from './date-utils';
+import { adjustToBrasiliaTimezone, tryDate } from './date-utils';
 import { FieldExtractors } from './extractors';
 
 /**
@@ -22,6 +22,7 @@ export interface LayoutDetectionResult {
 export class SegmentULayoutDetector {
   /**
    * Verifica se uma data é válida (formato DDMMAAAA)
+   * IMPORTANTE: Considera o fuso horário de Brasília (UTC-3)
    * @param dateStr - String da data no formato DDMMAAAA
    * @returns true se a data é válida
    */
@@ -29,8 +30,9 @@ export class SegmentULayoutDetector {
     if (!dateStr || dateStr.length !== 8) return false;
     if (/^0+$/.test(dateStr) || /^\s+$/.test(dateStr)) return false;
 
-    // Tentar parsear usando tryDate
-    const date = tryDate(dateStr, 'ddMMyyyy');
+    // Parsear data e ajustar para fuso horário de Brasília (UTC-3)
+    const parsedDate = tryDate(dateStr, 'ddMMyyyy');
+    const date = adjustToBrasiliaTimezone(parsedDate);
     if (!date) return false;
 
     // Validar range de datas razoável

@@ -69,7 +69,7 @@ export class SchemaParser {
         rawValue = FieldExtractors.extractDate(line, field.start, field.end);
         break;
       case 'date_short':
-        rawValue = FieldExtractors.extractDate(line, field.start, field.end);
+        rawValue = FieldExtractors.extractDateShort(line, field.start, field.end);
         break;
       default:
         rawValue = FieldExtractors.extractString(line, field.start, field.end);
