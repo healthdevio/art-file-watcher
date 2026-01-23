@@ -109,7 +109,6 @@ type AuditReturnRecord = {
   regionalNumber: string;
   regionalNumberDigit: string;
   titleNumber: string | null;
-  titlePortfolio: string | null;
   titleType: string | null;
   agency: string | null;
   agencyDigit: string | null;
@@ -132,6 +131,7 @@ type AuditReturnRecord = {
   paymentDate: Date | null;
   creditDate: Date | null;
   fileGenerationDate: string | null;
+  fileSequence: string | null;
 };
 
 /**
@@ -438,7 +438,7 @@ async function processCNAB240File(
   const fileHash = await getFileHash(filePath);
 
   // Inserir registros no banco
-  const { auditInfo } = await insertCNAB240RecordsToDatabase(fileName, result.cnabType, cnabData.header.generationDate, tuPairs, fileHash, logErrorOpts);
+  const { auditInfo } = await insertCNAB240RecordsToDatabase(fileName, result.cnabType, cnabData.header, tuPairs, fileHash, logErrorOpts);
 
   // Se atende aos filtros de auditoria: mover para <AUDIT_DIR>/<dd>/<regional>/ e registrar no log
   if (auditInfo) {
@@ -574,7 +574,7 @@ async function processFile(filePath: string): Promise<void> {
 async function insertCNAB240RecordsToDatabase(
   fileName: string,
   cnabType: string,
-  fileGenerationDate: string | undefined,
+  header: CNAB240['header'],
   tuPairs: Array<{ segmentT: SegmentoT; segmentU: SegmentoU; lineNumber: number }>,
   fileHash: string,
   logErrorOpts: LogErrorOpts
@@ -595,7 +595,6 @@ async function insertCNAB240RecordsToDatabase(
       regionalNumber: segmentT.regionalNumber,
       regionalNumberDigit: segmentT.regionalNumberDigit,
       titleNumber: segmentT.titleNumber || null,
-      titlePortfolio: segmentT.titlePortfolio || null,
       titleType: segmentT.titleType || null,
       agency: segmentT.agency || null,
       agencyDigit: segmentT.agencyDigit || null,
@@ -617,7 +616,8 @@ async function insertCNAB240RecordsToDatabase(
       netCreditValue: segmentU.receivedValue ?? null,
       paymentDate: parseCnabDate(segmentU.paymentDate),
       creditDate: parseCnabDate(segmentU.creditDate),
-      fileGenerationDate: fileGenerationDate || null,
+      fileGenerationDate: header.generationDate || null,
+      fileSequence: header.fileSequence || null,
     };
   });
   return upsertAuditRecords({ fileName, records, logErrorOpts });
@@ -649,7 +649,6 @@ async function insertCNAB400RecordsToDatabase(
       regionalNumber: detalhe.regionalNumber,
       regionalNumberDigit: detalhe.regionalNumberDigit,
       titleNumber: null,
-      titlePortfolio: null,
       titleType: null,
       agency: detalhe.agency || null,
       agencyDigit: detalhe.agencyDigit || null,
@@ -672,6 +671,7 @@ async function insertCNAB400RecordsToDatabase(
       paymentDate: parseCnabDate(detalhe.paymentDate ? expandYear(detalhe.paymentDate) : null),
       creditDate: parseCnabDate(detalhe.creditDate ? expandYear(detalhe.creditDate) : null),
       fileGenerationDate: header.generationDate ? expandYear(header.generationDate) : null,
+      fileSequence: header.fileSequence || null,
     };
   });
   return upsertAuditRecords({ fileName, records, logErrorOpts });

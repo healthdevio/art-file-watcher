@@ -48,6 +48,7 @@ export type HeaderCNAB400 = CommonHeader & {
   serviceId: string;
   // Código da empresa (posição 76-94)
   companyCode: string;
+  sequencial: string;
 };
 
 export type CNAB400 = {

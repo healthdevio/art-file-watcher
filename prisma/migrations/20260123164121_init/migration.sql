@@ -12,7 +12,6 @@ CREATE TABLE "AuditReturn" (
     "regionalNumber" TEXT NOT NULL,
     "regionalNumberDigit" TEXT NOT NULL,
     "titleNumber" TEXT,
-    "titlePortfolio" TEXT,
     "titleType" TEXT,
     "agency" TEXT,
     "agencyDigit" TEXT,
@@ -35,6 +34,7 @@ CREATE TABLE "AuditReturn" (
     "paymentDate" TIMESTAMP(3),
     "creditDate" TIMESTAMP(3),
     "fileGenerationDate" TEXT,
+    "fileSequence" TEXT,
     "processedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "AuditReturn_pkey" PRIMARY KEY ("id")

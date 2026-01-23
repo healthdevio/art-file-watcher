@@ -50,6 +50,9 @@ export class StructureBuilder {
   private static buildCNAB400(lines: string[]): CNAB400 {
     const firstLine = lines[0] || '';
     const header = HeaderParser400.parse(firstLine);
+    if (!header) {
+      throw new Error('Falha ao parsear header do arquivo CNAB 400');
+    }
 
     // Processa todas as linhas após o header
     const lineObjects: LineCNAB400[] = lines.slice(1).map((line, index) => {

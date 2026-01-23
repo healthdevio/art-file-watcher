@@ -31,7 +31,6 @@ model AuditReturn {
   regionalNumber      String // Nosso número
   regionalNumberDigit String
   titleNumber         String? @db.Text
-  titlePortfolio      String?
   titleType           String?
 
   // Conta bancária
@@ -68,6 +67,7 @@ model AuditReturn {
 
   // Metadados
   fileGenerationDate String? // Data de geração do arquivo (formato original)
+  fileSequence       String? // Número sequencial do arquivo (do header)
   processedAt        DateTime @default(now())
 
   // Índices para consultas de auditoria
