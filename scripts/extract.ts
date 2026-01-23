@@ -24,26 +24,22 @@ import { adjustToBrasiliaTimezone, tryDate } from '../src/services/read-ret-file
 const AUDIT_DIR = resolve(__dirname, '../volumes/audit/2026-01-22');
 const LOG_DIR = resolve(__dirname, '../volumes/audit/logs');
 const LOG_FILE = join(LOG_DIR, `errors_${new Date().toISOString().split('T')[0]}.log`);
+const AUDIT_LOG_FILE = join(LOG_DIR, `audit_files_${new Date().toISOString().split('T')[0]}.log`);
 
-// Limpar arquivo de log no início de cada execução para evitar duplicação entre execuções
+// Limpar arquivos de log no início de cada execução para evitar duplicação entre execuções
 if (!existsSync(LOG_DIR)) {
   mkdirSync(LOG_DIR, { recursive: true });
 }
 if (existsSync(LOG_FILE)) {
   writeFileSync(LOG_FILE, '', 'utf-8');
 }
-
-// Inicializar arquivo de log (limpar se existir para evitar duplicação entre execuções)
-if (!existsSync(LOG_DIR)) {
-  mkdirSync(LOG_DIR, { recursive: true });
-}
-// Limpar arquivo de log no início de cada execução
-if (existsSync(LOG_FILE)) {
-  writeFileSync(LOG_FILE, '', 'utf-8');
+if (existsSync(AUDIT_LOG_FILE)) {
+  writeFileSync(AUDIT_LOG_FILE, '', 'utf-8');
 }
 
-// Extensões de arquivos CNAB conhecidas
-const CNAB_EXTENSIONS = ['.RET', '.A2T9R5', '.A2U7F4', '.A2U1W8', '.ret', '.a2t9r5', '.a2u7f4', '.a2u1w8'];
+// Extensões de arquivos que devem ser IGNORADOS (blacklist)
+// Arquivos com essas extensões não serão processados
+const CNAB_BLACKLIST_EXTENSIONS = ['.json', '.log', '.txt'];
 
 // Filtro de tipo de arquivo para processar
 // Valores possíveis: 'CNAB400' | 'CNAB240' | 'ALL'
@@ -52,76 +48,92 @@ const FILE_TYPE_FILTER: 'CNAB400' | 'CNAB240' | 'ALL' = 'ALL';
 
 const agreementToRegional = [
   { agreement: '73356', regional: 'MS' },
+  { agreement: '073356', regional: 'MS' },
   { agreement: '234757', regional: 'BA' },
+  { agreement: '081294', regional: 'PR' },
   { agreement: '81294', regional: 'PR' },
+  { agreement: '052996', regional: 'ES' },
   { agreement: '52996', regional: 'ES' },
   { agreement: '2835965', regional: 'AC' },
   { agreement: '2835375', regional: 'AL' },
-{ agreement: '2909128', regional: 'AM' },
-{ agreement: '2828039', regional: 'AP' },
-{ agreement: '2848659', regional: 'DF' },
-{ agreement: '3726559', regional: 'CE' },
-{ agreement: '3632840', regional: 'ES' },
-{ agreement: '2832069', regional: 'GO' },
-{ agreement: '3711056', regional: 'MA' },
-{ agreement: '2832133', regional: 'MG' },
-{ agreement: '3704138', regional: 'MT' },
-{ agreement: '3643071', regional: 'RN' },
-{ agreement: '3402948', regional: 'PB' },
-{ agreement: '2810159', regional: 'PE' },
-{ agreement: '2810627', regional: 'PI' },
-{ agreement: '3650623', regional: 'PR' },
-{ agreement: '2807857', regional: 'RJ' },
-{ agreement: '3618432', regional: 'RO' },
-{ agreement: '3556968', regional: 'RR' },
-{ agreement: '3398378', regional: 'TO' },
-{ agreement: '054743', regional: 'CE' },
-{ agreement: '052261', regional: 'MA' },
-{ agreement: '220180', regional: 'RN' },
-{ agreement: '051316', regional: 'SE' },
-{ agreement: '081298', regional: '' },
-{ agreement: '082036', regional: ''},
-{ agreement: '051159', regional: ''},
-{ agreement: '054067', regional: ''},
-{ agreement: '051367', regional: ''},
-{ agreement: '076882', regional: ''},
-{ agreement: '2803079', regional: ''},
-{ agreement: '220172', regional: ''},
-{ agreement: '3751520', regional: ''},
-{ agreement: '3751521', regional: ''},
-{ agreement: '3751530', regional: ''},
-{ agreement: '3751535', regional: ''},
-{ agreement: '3751542', regional: ''},
-{ agreement: '3751538', regional: ''},
-{ agreement: '3751544', regional: ''},
-{ agreement: '3751546', regional: ''},
-{ agreement: '3751547', regional: ''},
-{ agreement: '3751550', regional: ''},
-{ agreement: '3751549', regional: ''},
-{ agreement: '3751551', regional: ''},
-{ agreement: '3751552', regional: ''},
-{ agreement: '3751554', regional: ''},
-{ agreement: '3751557', regional: ''},
-{ agreement: '3751558', regional: ''},
-{ agreement: '3751563', regional: ''},
-{ agreement: '3751562', regional: ''},
-{ agreement: '2808666', regional: ''},
-{ agreement: '2811856', regional: ''},
-{ agreement: '2812778', regional: ''},
-{ agreement: '2812861', regional: ''},
-{ agreement: '2814902', regional: ''},
-{ agreement: '2820878', regional: ''},
-{ agreement: '2822201', regional: ''},
-{ agreement: '2826443', regional: ''},
-{ agreement: '2891862', regional: '' },
-{ agreement: '052358', regional: '' },
-{ agreement: '051317', regional: '' },
-{ agreement: '3085950', regional: '' },
-{ agreement: '054074', regional: '' },
-{ agreement: '219695', regional: '' },
-{ agreement: '081052', regional: '' },
-{ agreement: '052360', regional: '' },
+  { agreement: '2909128', regional: 'AM' },
+  { agreement: '2828039', regional: 'AP' },
+  { agreement: '2848659', regional: 'DF' },
+  { agreement: '3726559', regional: 'CE' },
+  { agreement: '3632840', regional: 'ES' },
+  { agreement: '2832069', regional: 'GO' },
+  { agreement: '3711056', regional: 'MA' },
+  { agreement: '2832133', regional: 'MG' },
+  { agreement: '3704138', regional: 'MT' },
+  { agreement: '3643071', regional: 'RN' },
+  { agreement: '3402948', regional: 'PB' },
+  { agreement: '2810159', regional: 'PE' },
+  { agreement: '2810627', regional: 'PI' },
+  { agreement: '3650623', regional: 'PR' },
+  { agreement: '2807857', regional: 'RJ' },
+  { agreement: '3618432', regional: 'RO' },
+  { agreement: '3556968', regional: 'RR' },
+  { agreement: '3398378', regional: 'TO' },
+  { agreement: '054743', regional: 'CE' },
+  { agreement: '052261', regional: 'MA' },
+  { agreement: '220180', regional: 'RN' },
+  { agreement: '051316', regional: 'SE' },
+  { agreement: '081298', regional: '' },
+  { agreement: '082036', regional: '' },
+  { agreement: '051159', regional: '' },
+  { agreement: '054067', regional: '' },
+  { agreement: '051367', regional: '' },
+  { agreement: '076882', regional: '' },
+  { agreement: '2803079', regional: '' },
+  { agreement: '220172', regional: '' },
+  { agreement: '3751520', regional: '' },
+  { agreement: '3751521', regional: '' },
+  { agreement: '3751530', regional: '' },
+  { agreement: '3751535', regional: '' },
+  { agreement: '3751542', regional: '' },
+  { agreement: '3751538', regional: '' },
+  { agreement: '3751544', regional: '' },
+  { agreement: '3751546', regional: '' },
+  { agreement: '3751547', regional: '' },
+  { agreement: '3751550', regional: '' },
+  { agreement: '3751549', regional: '' },
+  { agreement: '3751551', regional: '' },
+  { agreement: '3751552', regional: '' },
+  { agreement: '3751554', regional: '' },
+  { agreement: '3751557', regional: '' },
+  { agreement: '3751558', regional: '' },
+  { agreement: '3751563', regional: '' },
+  { agreement: '3751562', regional: '' },
+  { agreement: '2808666', regional: '' },
+  { agreement: '2811856', regional: '' },
+  { agreement: '2812778', regional: '' },
+  { agreement: '2812861', regional: '' },
+  { agreement: '2814902', regional: '' },
+  { agreement: '2820878', regional: '' },
+  { agreement: '2822201', regional: '' },
+  { agreement: '2826443', regional: '' },
+  { agreement: '2891862', regional: '' },
+  { agreement: '052358', regional: '' },
+  { agreement: '051317', regional: '' },
+  { agreement: '3085950', regional: '' },
+  { agreement: '054074', regional: '' },
+  { agreement: '219695', regional: '' },
+  { agreement: '081052', regional: '' },
+  { agreement: '052360', regional: '' },
 ]
+
+type SaveLogFilter = {
+  creditDate?: string | string[];
+  regional?: string | string[];
+}
+const saveLogFilters: SaveLogFilter[] = [
+  { creditDate: '2026-01-02', regional: 'PR' },
+  { creditDate: '2026-01-02', regional: 'BA' },
+  { creditDate: '2026-01-15', regional: 'PR' },
+  { creditDate: '2026-01-15', regional: 'BA' },
+]
+
+
 
 /**
  * Busca a regional baseada no código do convênio
@@ -130,7 +142,7 @@ const agreementToRegional = [
  */
 function getRegionalByAgreement(agreement: string | null | undefined): string {
   if (!agreement) return '';
-  
+
   const mapping = agreementToRegional.find(m => m.agreement === agreement);
   return mapping?.regional || '--';
 }
@@ -159,6 +171,9 @@ const stats: ProcessingStats = {
 
 // Set para rastrear mensagens já logadas e evitar duplicação
 const loggedMessages = new Set<string>();
+
+// Set para rastrear arquivos já logados para auditoria (evitar duplicação)
+const loggedAuditFiles = new Set<string>();
 
 // Cache de hashes de arquivos para evitar recalcular
 const fileHashCache = new Map<string, string>();
@@ -190,7 +205,7 @@ async function getFileHash(filePath: string): Promise<string> {
   if (fileHashCache.has(filePath)) {
     return fileHashCache.get(filePath)!;
   }
-  
+
   const hashResult = await generateFileHash(filePath);
   fileHashCache.set(filePath, hashResult.fileHash);
   return hashResult.fileHash;
@@ -204,12 +219,12 @@ async function getFileHash(filePath: string): Promise<string> {
 function logError(fileName: string, error: string): void {
   // Criar chave única para evitar duplicação dentro da mesma execução
   const messageKey = `${fileName}|${error}`;
-  
+
   // Se já foi logado nesta execução, não logar novamente
   if (loggedMessages.has(messageKey)) {
     return;
   }
-  
+
   // Verificar se já existe no arquivo (para evitar duplicação entre execuções)
   try {
     if (existsSync(LOG_FILE)) {
@@ -225,22 +240,22 @@ function logError(fileName: string, error: string): void {
   } catch {
     // Se falhar ao ler arquivo, continuar normalmente
   }
-  
+
   // Marcar como logado ANTES de escrever para evitar race conditions
   loggedMessages.add(messageKey);
-  
+
   try {
     // Garantir que o diretório existe
     if (!existsSync(LOG_DIR)) {
       mkdirSync(LOG_DIR, { recursive: true });
     }
-    
+
     // Escrever no arquivo apenas uma vez
     const timestamp = new Date().toISOString();
     const logLine = `[${timestamp}] ${fileName} | ${error}\n`;
-    
+
     appendFileSync(LOG_FILE, logLine, 'utf-8');
-    
+
     // Exibir no console apenas após escrever no arquivo com sucesso
     console.error(`  ✗ ${fileName}: ${error}`);
   } catch (logErr) {
@@ -255,11 +270,136 @@ function logError(fileName: string, error: string): void {
 }
 
 /**
+ * Escreve o nome de um arquivo no log de auditoria
+ * Evita duplicação verificando se o arquivo já foi logado
+ */
+function logAuditFile(fileName: string, reason: string): void {
+  // Se já foi logado nesta execução, não logar novamente
+  if (loggedAuditFiles.has(fileName)) {
+    return;
+  }
+
+  // Verificar se já existe no arquivo (para evitar duplicação entre execuções)
+  try {
+    if (existsSync(AUDIT_LOG_FILE)) {
+      const fileContent = readFileSync(AUDIT_LOG_FILE, 'utf-8');
+      if (fileContent.includes(fileName)) {
+        // Já existe no arquivo, apenas marcar como logado
+        loggedAuditFiles.add(fileName);
+        return;
+      }
+    }
+  } catch {
+    // Se falhar ao ler arquivo, continuar normalmente
+  }
+
+  // Marcar como logado ANTES de escrever para evitar race conditions
+  loggedAuditFiles.add(fileName);
+
+  try {
+    // Garantir que o diretório existe
+    if (!existsSync(LOG_DIR)) {
+      mkdirSync(LOG_DIR, { recursive: true });
+    }
+
+    // Escrever no arquivo apenas uma vez
+    // const timestamp = new Date().toISOString();
+    const logLine = `${fileName} | ${reason}\n`;
+
+    appendFileSync(AUDIT_LOG_FILE, logLine, 'utf-8');
+  } catch (logErr) {
+    // Se falhar ao escrever log, apenas imprime no console (sem duplicar)
+    const errorKey = `AUDIT_LOG_WRITE_ERROR|${fileName}`;
+    if (!loggedMessages.has(errorKey)) {
+      loggedMessages.add(errorKey);
+      console.error(`Erro ao escrever log de auditoria para ${fileName}:`, logErr);
+    }
+  }
+}
+
+/**
+ * Converte uma Date para string no formato YYYY-MM-DD
+ */
+function formatDateForFilter(date: Date | null): string | null {
+  if (!date) return null;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Verifica se um registro atende aos filtros de auditoria
+ * Verifica creditDate e regional conforme os filtros definidos
+ */
+function matchesAuditFilter(creditDate: Date | null, regional: string): boolean {
+  if (!creditDate) return false;
+
+  const dateStr = formatDateForFilter(creditDate);
+  if (!dateStr) return false;
+
+  // Verificar se atende a algum filtro
+  for (const filter of saveLogFilters) {
+    // Verificar creditDate
+    let dateMatches = false;
+    if (filter.creditDate) {
+      if (Array.isArray(filter.creditDate)) {
+        dateMatches = filter.creditDate.includes(dateStr);
+      } else {
+        dateMatches = filter.creditDate === dateStr;
+      }
+    } else {
+      dateMatches = true; // Se não há filtro de creditDate, aceita qualquer data
+    }
+
+    // Verificar regional
+    let regionalMatches = false;
+    if (filter.regional) {
+      if (Array.isArray(filter.regional)) {
+        regionalMatches = filter.regional.includes(regional);
+      } else {
+        regionalMatches = filter.regional === regional;
+      }
+    } else {
+      regionalMatches = true; // Se não há filtro de regional, aceita qualquer regional
+    }
+
+    // Se ambos os filtros correspondem (ou não existem), o registro atende
+    if (dateMatches && regionalMatches) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
  * Verifica se um arquivo é um arquivo CNAB válido
+ * Usa blacklist: retorna true se a extensão NÃO estiver na lista de extensões ignoradas
+ * Comparação case-insensitive (funciona com maiúsculas e minúsculas)
  */
 function isCnabFile(filePath: string): boolean {
-  const ext = filePath.substring(filePath.lastIndexOf('.')).toUpperCase();
-  return CNAB_EXTENSIONS.some(e => e.toUpperCase() === ext);
+  // Extrair extensão do arquivo
+  const lastDotIndex = filePath.lastIndexOf('.');
+  if (lastDotIndex === -1) {
+    // Arquivo sem extensão, aceitar
+    return true;
+  }
+
+  // Normalizar extensão para maiúsculas (case-insensitive)
+  const ext = filePath.substring(lastDotIndex).toUpperCase();
+
+  // Se extensão vazia ou apenas ponto, aceitar
+  if (!ext || ext === '.') return true;
+
+  // Verificar se a extensão está na blacklist (comparação case-insensitive)
+  // Normalizar cada item da blacklist para maiúsculas antes de comparar
+  const isBlacklisted = CNAB_BLACKLIST_EXTENSIONS.some(
+    blacklistedExt => blacklistedExt.toUpperCase() === ext
+  );
+
+  // Retornar true se NÃO estiver na blacklist
+  return !isBlacklisted;
 }
 
 /**
@@ -267,13 +407,13 @@ function isCnabFile(filePath: string): boolean {
  */
 function listCnabFiles(dir: string): string[] {
   const files: string[] = [];
-  
+
   try {
     const entries = readdirSync(dir, { withFileTypes: true });
-    
+
     for (const entry of entries) {
       const fullPath = join(dir, entry.name);
-      
+
       if (entry.isDirectory()) {
         // Recursão em subdiretórios
         files.push(...listCnabFiles(fullPath));
@@ -284,7 +424,7 @@ function listCnabFiles(dir: string): string[] {
   } catch (error) {
     console.error(`Erro ao listar arquivos em ${dir}:`, error);
   }
-  
+
   return files;
 }
 
@@ -294,25 +434,25 @@ function listCnabFiles(dir: string): string[] {
  */
 function expandYear(dateStr: string): string {
   if (!dateStr || !dateStr.includes('/')) return dateStr;
-  
+
   const parts = dateStr.split('/');
   if (parts.length !== 3) return dateStr;
-  
+
   const [day, month, year] = parts;
-  
+
   // Se o ano já tem 4 dígitos, retorna como está
   if (year.length === 4) return dateStr;
-  
+
   // Se o ano tem 2 dígitos, expande
   if (year.length === 2) {
     const yearNum = parseInt(year, 10);
     if (isNaN(yearNum)) return dateStr;
-    
+
     // Anos <= 50 são 20XX, anos > 50 são 19XX
     const fullYear = yearNum <= 50 ? `20${year.padStart(2, '0')}` : `19${year.padStart(2, '0')}`;
     return `${day}/${month}/${fullYear}`;
   }
-  
+
   return dateStr;
 }
 
@@ -385,15 +525,15 @@ async function processCNAB240File(
   cnabData: CNAB240
 ): Promise<void> {
   const fileDir = dirname(filePath);
-  
+
   // Extrair pares T/U
   // Os segmentos T e U devem estar consecutivos e vinculados pelo mesmo código de movimento e lote
   const tuPairs: Array<{ segmentT: SegmentoT; segmentU: SegmentoU; lineNumber: number }> = [];
   let currentSegmentT: SegmentoT | null = null;
-  
+
   for (const line of cnabData.lines) {
     if (!line.payload) continue;
-    
+
     if (isSegmentoT(line.payload)) {
       // Se já havia um T sem U correspondente, descartar
       currentSegmentT = line.payload;
@@ -403,7 +543,7 @@ async function processCNAB240File(
         // Devem ter mesmo código de movimento, lote e sequência consecutiva
         const tSeqNum = parseInt(currentSegmentT.sequenceNumber, 10);
         const uSeqNum = parseInt(line.payload.sequenceNumber, 10);
-        
+
         if (
           currentSegmentT.movementCode === line.payload.movementCode &&
           currentSegmentT.lotCode === line.payload.lotCode &&
@@ -427,12 +567,12 @@ async function processCNAB240File(
       currentSegmentT = null;
     }
   }
-  
+
   if (tuPairs.length === 0) {
     logError(fileName, 'Nenhum par T/U encontrado, pulando salvamento...');
     return;
   }
-  
+
   // Salvar JSON no mesmo diretório
   const jsonPath = join(fileDir, `${fileName}.json`);
   const jsonData = {
@@ -447,15 +587,15 @@ async function processCNAB240File(
     })),
     metadata: result.metadata,
   };
-  
+
   writeFileSync(jsonPath, JSON.stringify(jsonData, null, 2), 'utf-8');
-  
+
   // Obter hash do arquivo
   const fileHash = await getFileHash(filePath);
-  
+
   // Inserir registros no banco
   await insertCNAB240RecordsToDatabase(fileName, result.cnabType, cnabData.header.generationDate, tuPairs, fileHash);
-  
+
   stats.processedFiles++;
   stats.totalRecords += tuPairs.length;
 }
@@ -470,13 +610,13 @@ async function processCNAB400File(
   cnabData: CNAB400
 ): Promise<void> {
   const fileDir = dirname(filePath);
-  
+
   // Extrair detalhes (tipo de registro 7)
   const detalhes: Array<{ detalhe: DetalheCNAB400; lineNumber: number }> = [];
-  
+
   for (const line of cnabData.lines) {
     if (!line.payload) continue;
-    
+
     if (isDetalheCNAB400(line.payload)) {
       detalhes.push({
         detalhe: line.payload,
@@ -484,12 +624,12 @@ async function processCNAB400File(
       });
     }
   }
-  
+
   if (detalhes.length === 0) {
     logError(fileName, 'Nenhum detalhe encontrado, pulando salvamento...');
     return;
   }
-  
+
   // Salvar JSON no mesmo diretório
   const jsonPath = join(fileDir, `${fileName}.json`);
   const jsonData = {
@@ -503,15 +643,15 @@ async function processCNAB400File(
     })),
     metadata: result.metadata,
   };
-  
+
   writeFileSync(jsonPath, JSON.stringify(jsonData, null, 2), 'utf-8');
-  
+
   // Obter hash do arquivo
   const fileHash = await getFileHash(filePath);
-  
+
   // Inserir registros no banco
   await insertCNAB400RecordsToDatabase(fileName, result.cnabType, cnabData.header, detalhes, fileHash);
-  
+
   stats.processedFiles++;
   stats.totalRecords += detalhes.length;
 }
@@ -521,44 +661,44 @@ async function processCNAB400File(
  */
 async function processFile(filePath: string): Promise<void> {
   const fileName = basename(filePath);
-  
+
   console.log(`\n[${stats.processedFiles + 1}/${stats.totalFiles}] Processando: ${fileName}`);
-  
+
   try {
     // Ler arquivo usando ReadRetFileService
     const readService = new ReadRetFileService();
     const result = await readService.read(filePath);
-    
+
     if (!result.success || !result.data) {
       throw new Error(result.error || 'Falha ao ler arquivo');
     }
-    
+
     // Processar apenas arquivos CNAB 240 ou CNAB 400
     if (result.cnabType === 'UNKNOWN') {
       logError(fileName, 'Tipo de arquivo desconhecido, pulando...');
       return;
     }
-    
+
     // Aplicar filtro de tipo de arquivo
     const isCNAB240 = result.cnabType === 'CNAB240_30' || result.cnabType === 'CNAB240_40';
     const isCNAB400 = result.cnabType === 'CNAB400';
-    
+
     if (FILE_TYPE_FILTER === 'CNAB400' && !isCNAB400) {
       // console.log(`  ⊘ ${fileName}: Pulando (filtro: apenas CNAB 400)`);
       return;
     }
-    
+
     if (FILE_TYPE_FILTER === 'CNAB240' && !isCNAB240) {
       // console.log(`  ⊘ ${fileName}: Pulando (filtro: apenas CNAB 240)`);
       return;
     }
-    
+
     // Processar CNAB 240
     if (isCNAB240) {
       await processCNAB240File(filePath, fileName, result, result.data as CNAB240);
       return;
     }
-    
+
     // Processar CNAB 400
     if (isCNAB400) {
       await processCNAB400File(filePath, fileName, result, result.data as CNAB400);
@@ -586,45 +726,45 @@ async function insertCNAB240RecordsToDatabase(
     const { segmentT, segmentU, lineNumber } = pair;
     const recordHash = generateRecordHash(fileHash, lineNumber);
     const agreement = segmentT.agreement;
-    
+
     return {
       recordHash,
       regional: getRegionalByAgreement(agreement),
       fileName,
       cnabType,
       lineNumber,
-      
+
       // Banco e Convênio
       bankCode: segmentT.bankCode,
       agreement,
       lotCode: segmentT.lotCode,
-      
+
       // Título
       regionalNumber: segmentT.regionalNumber,
       regionalNumberDigit: segmentT.regionalNumberDigit,
       titleNumber: segmentT.titleNumber || null,
       titlePortfolio: segmentT.titlePortfolio || null,
       titleType: segmentT.titleType || null,
-      
+
       // Conta bancária
       agency: segmentT.agency || null,
       agencyDigit: segmentT.agencyDigit || null,
       account: segmentT.account || null,
       accountDigit: segmentT.accountDigit || null,
-      
+
       // Pagador
       payerName: segmentT.payerName || null,
       payerRegistration: segmentT.payerRegistration || null,
       payerRegistrationType: segmentT.payerRegistrationType || null,
-      
+
       // Movimentação
       movementCode: segmentT.movementCode,
       occurrenceCode: null, // occurrenceCode não está disponível no SegmentoU
-      
+
       // Valores do Segmento T - confiando totalmente no serviço read-ret-file
       receivedValue: segmentT.receivedValue ?? null,
       tariff: segmentT.tariff ?? null,
-      
+
       // Valores do Segmento U - confiando totalmente no serviço read-ret-file
       accruedInterest: segmentU.accruedInterest ?? null,
       discountAmount: segmentU.discountAmount ?? null,
@@ -633,21 +773,38 @@ async function insertCNAB240RecordsToDatabase(
       otherExpenses: segmentU.otherExpenses ?? null,
       otherCredits: segmentU.otherCredits ?? null,
       netCreditValue: segmentU.receivedValue ?? null, // Valor líquido creditado
-      
+
       // Datas
       paymentDate: parseCnabDate(segmentU.paymentDate),
       creditDate: parseCnabDate(segmentU.creditDate),
-      
+
       // Metadados
       fileGenerationDate: fileGenerationDate || null,
     };
   });
-  
+
+  // Verificar se algum registro atende aos filtros de auditoria
+  // Verifica apenas creditDate conforme os filtros definidos
+  let shouldLogAudit = false;
+  let auditReason = '';
+  for (const record of records) {
+    if (record.creditDate && matchesAuditFilter(record.creditDate, record.regional)) {
+      shouldLogAudit = true;
+      auditReason = `CNAB240, ${record.bankCode || 'N/A'}, ${formatDateForFilter(record.creditDate)}, ${record.regional}`;
+      break;
+    }
+  }
+
+  // Se encontrou registro que atende aos filtros, logar o arquivo
+  if (shouldLogAudit) {
+    logAuditFile(fileName, auditReason);
+  }
+
   // Inserir/atualizar usando upsert com concorrência limitada (evita esgotar pool de conexões)
   const queue = new PQueue({ concurrency: UPSERT_CONCURRENCY });
   let upserted = 0;
   let errors = 0;
-  
+
   // Adicionar todos os upserts na fila com concorrência limitada
   const upsertPromises = records.map((record) =>
     queue.add(async () => {
@@ -667,10 +824,10 @@ async function insertCNAB240RecordsToDatabase(
       }
     })
   );
-  
+
   // Aguardar todos os upserts completarem
   await Promise.all(upsertPromises);
-  
+
   stats.insertedRecords += upserted;
   console.log(`  ✓ ${upserted}/${records.length} registros processados${errors > 0 ? ` (${errors} erros)` : ''}`);
 }
@@ -688,7 +845,7 @@ async function insertCNAB400RecordsToDatabase(
   const records = detalhes.map(({ detalhe, lineNumber }) => {
     const recordHash = generateRecordHash(fileHash, lineNumber);
     const agreement = detalhe.agreement;
-    
+
     // CNAB 400 não tem alguns campos do CNAB 240, então usamos null
     return {
       recordHash,
@@ -696,38 +853,38 @@ async function insertCNAB400RecordsToDatabase(
       fileName,
       cnabType,
       lineNumber,
-      
+
       // Banco e Convênio
       bankCode: header.bankCode || '',
       agreement,
       lotCode: '', // CNAB 400 não tem lote
-      
+
       // Título
       regionalNumber: detalhe.regionalNumber,
       regionalNumberDigit: detalhe.regionalNumberDigit,
       titleNumber: null, // CNAB 400 não tem este campo separado
       titlePortfolio: null,
       titleType: null,
-      
+
       // Conta bancária
       agency: detalhe.agency || null,
       agencyDigit: detalhe.agencyDigit || null,
       account: detalhe.account || null,
       accountDigit: detalhe.accountDigit || null,
-      
+
       // Pagador - CNAB 400 não tem estes campos
       payerName: null,
       payerRegistration: null,
       payerRegistrationType: null,
-      
+
       // Movimentação
       movementCode: detalhe.movementCode || '',
       occurrenceCode: null,
-      
+
       // Valores do Segmento T (CNAB 400 tem apenas receivedValue e tariff)
       receivedValue: detalhe.receivedValue || null,
       tariff: detalhe.tariff || null,
-      
+
       // Valores do Segmento U - CNAB 400 não tem estes campos detalhados
       accruedInterest: null,
       discountAmount: null,
@@ -736,21 +893,38 @@ async function insertCNAB400RecordsToDatabase(
       otherExpenses: null,
       otherCredits: null,
       netCreditValue: detalhe.receivedValue || null, // No CNAB 400, receivedValue é o valor creditado
-      
+
       // Datas - expandir ano de 2 para 4 dígitos se necessário
       paymentDate: parseCnabDate(detalhe.paymentDate ? expandYear(detalhe.paymentDate) : null),
       creditDate: parseCnabDate(detalhe.creditDate ? expandYear(detalhe.creditDate) : null),
-      
+
       // Metadados
       fileGenerationDate: header.generationDate ? expandYear(header.generationDate) : null,
     };
   });
-  
+
+  // Verificar se algum registro atende aos filtros de auditoria
+  // Verifica apenas creditDate conforme os filtros definidos
+  let shouldLogAudit = false;
+  let auditReason = '';
+  for (const record of records) {
+    if (record.creditDate && matchesAuditFilter(record.creditDate, record.regional)) {
+      shouldLogAudit = true;
+      auditReason = `CNAB400, ${record.bankCode || 'N/A'}, ${formatDateForFilter(record.creditDate)}, ${record.regional}`;
+      break;
+    }
+  }
+
+  // Se encontrou registro que atende aos filtros, logar o arquivo
+  if (shouldLogAudit) {
+    logAuditFile(fileName, auditReason);
+  }
+
   // Inserir/atualizar usando upsert com concorrência limitada (evita esgotar pool de conexões)
   const queue = new PQueue({ concurrency: UPSERT_CONCURRENCY });
   let upserted = 0;
   let errors = 0;
-  
+
   // Adicionar todos os upserts na fila com concorrência limitada
   const upsertPromises = records.map((record) =>
     queue.add(async () => {
@@ -770,10 +944,10 @@ async function insertCNAB400RecordsToDatabase(
       }
     })
   );
-  
+
   // Aguardar todos os upserts completarem
   await Promise.all(upsertPromises);
-  
+
   stats.insertedRecords += upserted;
   console.log(`  ✓ ${upserted}/${records.length} registros processados${errors > 0 ? ` (${errors} erros)` : ''}`);
 }
@@ -786,33 +960,33 @@ async function main(): Promise<void> {
   console.log('Script de Auditoria CNAB 240 - Dezembro 2025');
   console.log('='.repeat(80));
   console.log(`\nDiretório de auditoria: ${AUDIT_DIR}`);
-  
+
   // Verificar se o diretório existe
   if (!existsSync(AUDIT_DIR)) {
     console.error(`\n✗ Erro: Diretório não encontrado: ${AUDIT_DIR}`);
     process.exit(1);
   }
-  
+
   // Listar arquivos
   console.log('\nListando arquivos CNAB...');
   const files = listCnabFiles(AUDIT_DIR);
   stats.totalFiles = files.length;
-  
+
   console.log(`\n✓ Encontrados ${files.length} arquivos CNAB`);
-  
+
   if (files.length === 0) {
     console.log('\nNenhum arquivo para processar. Encerrando...');
     await prisma.$disconnect();
     return;
   }
-  
+
   // Processar cada arquivo
   console.log('\nIniciando processamento...\n');
-  
+
   for (const file of files) {
     await processFile(file);
   }
-  
+
   // Resumo final
   console.log('\n' + '='.repeat(80));
   console.log('Resumo do Processamento');
@@ -822,7 +996,7 @@ async function main(): Promise<void> {
   console.log(`Arquivos com erro: ${stats.failedFiles}`);
   console.log(`Total de registros encontrados: ${stats.totalRecords}`);
   console.log(`Registros inseridos no banco: ${stats.insertedRecords}`);
-  
+
   if (stats.errors.length > 0) {
     console.log(`\nErros encontrados (${stats.errors.length}):`);
     stats.errors.slice(0, 10).forEach((err, idx) => {
@@ -832,13 +1006,18 @@ async function main(): Promise<void> {
       console.log(`  ... e mais ${stats.errors.length - 10} erros`);
     }
   }
-  
+
   console.log('\n✓ Processamento concluído!');
-  
+
   if (stats.errors.length > 0) {
     console.log(`\n📝 Log de erros salvo em: ${LOG_FILE}`);
   }
-  
+
+  if (loggedAuditFiles.size > 0) {
+    console.log(`\n📋 Log de arquivos para auditoria salvo em: ${AUDIT_LOG_FILE}`);
+    console.log(`   Total de arquivos marcados para auditoria: ${loggedAuditFiles.size}`);
+  }
+
   // Desconectar Prisma
   await prisma.$disconnect();
 }

@@ -27,8 +27,6 @@ export type CommonHeader = {
   generationDate: string;
   /** Número sequencial do arquivo */
   fileSequence: string;
-  /** Campo reservado */
-  reserved: string;
 };
 
 /**

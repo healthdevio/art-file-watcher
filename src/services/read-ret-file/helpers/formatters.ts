@@ -121,3 +121,8 @@ export function normalizeRegistration(registration: string): string {
 
   return normalized;
 }
+
+export function normalizeTrim(value: string): string {
+  if (!value) return '';
+  return value?.trim?.() ?? '';
+}

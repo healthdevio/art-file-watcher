@@ -62,6 +62,8 @@ export type SegmentoT = CommonRecordFields &
     titleNumber: string;
     /** Carteira/Portfólio */
     titlePortfolio: string;
+    overdueDate?: string;
+
     /** Tipo de título */
     titleType: string;
     /** Código de juros */
@@ -72,6 +74,8 @@ export type SegmentoT = CommonRecordFields &
     payerRegistration: string;
     /** Nome do pagador */
     payerName: string;
+    occurrenceReason?: string;
+    titleCompanyNumber?: string;
   };
 
 /**

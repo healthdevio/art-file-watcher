@@ -21,8 +21,7 @@ export const HEADER_ARQUIVO_SCHEMA: LineSchema<HeaderCNAB240> = {
   generationDate: { start: 143, end: 151, extractor: 'date' },
   generationTime: { start: 151, end: 157, extractor: 'string' },
   fileSequence: { start: 157, end: 163, extractor: 'string' },
-  recordDensity: { start: 164, end: 167, extractor: 'string' },
-  reserved: { start: 167, end: 171, extractor: 'string' },
+  recordDensity: { start: 166, end: 171, extractor: 'string' },
   fileCode: { start: 163, end: 166, extractor: 'string' },
   fileType: { start: 0, end: 0, extractor: 'string' }, // Campo fixo 'CNAB240', será preenchido pelo parser
 };
