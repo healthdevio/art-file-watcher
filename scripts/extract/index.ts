@@ -11,18 +11,22 @@
 
 import { PrismaClient } from '@prisma/client';
 import { createHash } from 'crypto';
-import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import PQueue from 'p-queue';
-import { generateFileHash } from '../src/services/file-hash';
-import type { CNAB240, SegmentoT, SegmentoU } from '../src/services/read-ret-file/interfaces/CNAB-240';
-import type { CNAB400, DetalheCNAB400 } from '../src/services/read-ret-file/interfaces/CNAB-400';
-import { ReadRetFileService } from '../src/services/read-ret-file/read-ret-file.service';
-import { adjustToBrasiliaTimezone, tryDate } from '../src/services/read-ret-file/schema/core/date-utils';
+import { generateFileHash } from '../../src/services/file-hash';
+import type { CNAB240, SegmentoT, SegmentoU } from '../../src/services/read-ret-file/interfaces/CNAB-240';
+import type { CNAB400, DetalheCNAB400 } from '../../src/services/read-ret-file/interfaces/CNAB-400';
+import { ReadRetFileService } from '../../src/services/read-ret-file/read-ret-file.service';
+import { adjustToBrasiliaTimezone, tryDate } from '../../src/services/read-ret-file/schema/core/date-utils';
+import { moveFileToAuditFolder } from './audit';
+import { agreementToRegional, CNAB_BLACKLIST_EXTENSIONS, FILE_TYPE_FILTER } from './constants';
+import { formatDateForFilter, getDayFromDateStr, matchesAuditFilter } from './filters';
+import { logAuditFile, logError, type LogErrorOpts } from './logs';
 
 // Configurações hardcoded conforme especificado
-const AUDIT_DIR = resolve(__dirname, '../volumes/audit/2026-01-22');
-const LOG_DIR = resolve(__dirname, '../volumes/audit/logs');
+const AUDIT_DIR = resolve(__dirname, '../../volumes/audit/2026-01-22');
+const LOG_DIR = resolve(__dirname, '../../volumes/audit/logs');
 const LOG_FILE = join(LOG_DIR, `errors_${new Date().toISOString().split('T')[0]}.log`);
 const AUDIT_LOG_FILE = join(LOG_DIR, `audit_files_${new Date().toISOString().split('T')[0]}.log`);
 
@@ -37,101 +41,9 @@ if (existsSync(AUDIT_LOG_FILE)) {
   writeFileSync(AUDIT_LOG_FILE, '', 'utf-8');
 }
 
-// Extensões de arquivos que devem ser IGNORADOS (blacklist)
-// Arquivos com essas extensões não serão processados
-const CNAB_BLACKLIST_EXTENSIONS = ['.json', '.log', '.txt'];
 
-// Filtro de tipo de arquivo para processar
-// Valores possíveis: 'CNAB400' | 'CNAB240' | 'ALL'
-// Altere apenas esta linha para mudar o filtro
-const FILE_TYPE_FILTER: 'CNAB400' | 'CNAB240' | 'ALL' = 'ALL';
 
-const agreementToRegional = [
-  { agreement: '73356', regional: 'MS' },
-  { agreement: '073356', regional: 'MS' },
-  { agreement: '234757', regional: 'BA' },
-  { agreement: '081294', regional: 'PR' },
-  { agreement: '81294', regional: 'PR' },
-  { agreement: '052996', regional: 'ES' },
-  { agreement: '52996', regional: 'ES' },
-  { agreement: '2835965', regional: 'AC' },
-  { agreement: '2835375', regional: 'AL' },
-  { agreement: '2909128', regional: 'AM' },
-  { agreement: '2828039', regional: 'AP' },
-  { agreement: '2848659', regional: 'DF' },
-  { agreement: '3726559', regional: 'CE' },
-  { agreement: '3632840', regional: 'ES' },
-  { agreement: '2832069', regional: 'GO' },
-  { agreement: '3711056', regional: 'MA' },
-  { agreement: '2832133', regional: 'MG' },
-  { agreement: '3704138', regional: 'MT' },
-  { agreement: '3643071', regional: 'RN' },
-  { agreement: '3402948', regional: 'PB' },
-  { agreement: '2810159', regional: 'PE' },
-  { agreement: '2810627', regional: 'PI' },
-  { agreement: '3650623', regional: 'PR' },
-  { agreement: '2807857', regional: 'RJ' },
-  { agreement: '3618432', regional: 'RO' },
-  { agreement: '3556968', regional: 'RR' },
-  { agreement: '3398378', regional: 'TO' },
-  { agreement: '054743', regional: 'CE' },
-  { agreement: '052261', regional: 'MA' },
-  { agreement: '220180', regional: 'RN' },
-  { agreement: '051316', regional: 'SE' },
-  { agreement: '081298', regional: '' },
-  { agreement: '082036', regional: '' },
-  { agreement: '051159', regional: '' },
-  { agreement: '054067', regional: '' },
-  { agreement: '051367', regional: '' },
-  { agreement: '076882', regional: '' },
-  { agreement: '2803079', regional: '' },
-  { agreement: '220172', regional: '' },
-  { agreement: '3751520', regional: '' },
-  { agreement: '3751521', regional: '' },
-  { agreement: '3751530', regional: '' },
-  { agreement: '3751535', regional: '' },
-  { agreement: '3751542', regional: '' },
-  { agreement: '3751538', regional: '' },
-  { agreement: '3751544', regional: '' },
-  { agreement: '3751546', regional: '' },
-  { agreement: '3751547', regional: '' },
-  { agreement: '3751550', regional: '' },
-  { agreement: '3751549', regional: '' },
-  { agreement: '3751551', regional: '' },
-  { agreement: '3751552', regional: '' },
-  { agreement: '3751554', regional: '' },
-  { agreement: '3751557', regional: '' },
-  { agreement: '3751558', regional: '' },
-  { agreement: '3751563', regional: '' },
-  { agreement: '3751562', regional: '' },
-  { agreement: '2808666', regional: '' },
-  { agreement: '2811856', regional: '' },
-  { agreement: '2812778', regional: '' },
-  { agreement: '2812861', regional: '' },
-  { agreement: '2814902', regional: '' },
-  { agreement: '2820878', regional: '' },
-  { agreement: '2822201', regional: '' },
-  { agreement: '2826443', regional: '' },
-  { agreement: '2891862', regional: '' },
-  { agreement: '052358', regional: '' },
-  { agreement: '051317', regional: '' },
-  { agreement: '3085950', regional: '' },
-  { agreement: '054074', regional: '' },
-  { agreement: '219695', regional: '' },
-  { agreement: '081052', regional: '' },
-  { agreement: '052360', regional: '' },
-]
 
-type SaveLogFilter = {
-  creditDate?: string | string[];
-  regional?: string | string[];
-}
-const saveLogFilters: SaveLogFilter[] = [
-  { creditDate: '2026-01-02', regional: 'PR' },
-  { creditDate: '2026-01-02', regional: 'BA' },
-  { creditDate: '2026-01-15', regional: 'PR' },
-  { creditDate: '2026-01-15', regional: 'BA' },
-]
 
 
 
@@ -175,11 +87,105 @@ const loggedMessages = new Set<string>();
 // Set para rastrear arquivos já logados para auditoria (evitar duplicação)
 const loggedAuditFiles = new Set<string>();
 
+const logErrorOpts = { logFilePath: LOG_FILE, logDir: LOG_DIR, loggedMessages };
+const logAuditFileOpts = { auditLogFilePath: AUDIT_LOG_FILE, logDir: LOG_DIR, loggedAuditFiles, loggedMessages };
+
 // Cache de hashes de arquivos para evitar recalcular
 const fileHashCache = new Map<string, string>();
 
 // Fila para limitar concorrência de upserts (evitar esgotar pool de conexões)
-const UPSERT_CONCURRENCY = 8; // Limitar a 10 upserts simultâneos
+const UPSERT_CONCURRENCY = 8;
+
+/** Tipo do registro para create/update em AuditReturn (campos que preenchemos). */
+type AuditReturnRecord = {
+  recordHash: string;
+  regional: string;
+  fileName: string;
+  cnabType: string;
+  lineNumber: number;
+  bankCode: string;
+  agreement: string;
+  lotCode: string;
+  regionalNumber: string;
+  regionalNumberDigit: string;
+  titleNumber: string | null;
+  titlePortfolio: string | null;
+  titleType: string | null;
+  agency: string | null;
+  agencyDigit: string | null;
+  account: string | null;
+  accountDigit: string | null;
+  payerName: string | null;
+  payerRegistration: string | null;
+  payerRegistrationType: string | null;
+  movementCode: string;
+  occurrenceCode: string | null;
+  receivedValue: number | null;
+  tariff: number | null;
+  accruedInterest: number | null;
+  discountAmount: number | null;
+  dischargeAmount: number | null;
+  paidAmount: number | null;
+  otherExpenses: number | null;
+  otherCredits: number | null;
+  netCreditValue: number | null;
+  paymentDate: Date | null;
+  creditDate: Date | null;
+  fileGenerationDate: string | null;
+};
+
+/**
+ * Faz upsert dos registros na AuditReturn, calcula auditInfo e atualiza stats.
+ * Função unificada para CNAB 240 e CNAB 400.
+ */
+async function upsertAuditRecords(opts: {
+  fileName: string;
+  records: AuditReturnRecord[];
+  logErrorOpts: LogErrorOpts;
+}): Promise<{ auditInfo: { regional: string; day: string; reason: string } | null }> {
+  const { fileName, records, logErrorOpts } = opts;
+
+  let auditInfo: { regional: string; day: string; reason: string } | null = null;
+  for (const r of records) {
+    if (r.creditDate && matchesAuditFilter(r.creditDate, r.regional)) {
+      const dateStr = formatDateForFilter(r.creditDate)!;
+      auditInfo = {
+        regional: r.regional,
+        day: getDayFromDateStr(dateStr),
+        reason: `${r.cnabType}, ${r.bankCode || 'N/A'}, ${dateStr}, ${r.regional}`,
+      };
+      break;
+    }
+  }
+
+  const queue = new PQueue({ concurrency: UPSERT_CONCURRENCY });
+  let upserted = 0;
+  let errors = 0;
+
+  const upsertPromises = records.map((record) =>
+    queue.add(async () => {
+      try {
+        await prisma.auditReturn.upsert({
+          where: { recordHash: record.recordHash },
+          update: record,
+          create: record,
+        });
+        upserted++;
+        return { success: true };
+      } catch (err) {
+        errors++;
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        logError(fileName, `Erro ao fazer upsert registro linha ${record.lineNumber}: ${errorMsg}`, logErrorOpts);
+        return { success: false };
+      }
+    })
+  );
+
+  await Promise.all(upsertPromises);
+  stats.insertedRecords += upserted;
+  console.log(`  ✓ ${upserted}/${records.length} registros processados${errors > 0 ? ` (${errors} erros)` : ''}`);
+  return { auditInfo };
+}
 
 /**
  * Gera hash único para um registro baseado no hash do arquivo + número da linha
@@ -209,168 +215,6 @@ async function getFileHash(filePath: string): Promise<string> {
   const hashResult = await generateFileHash(filePath);
   fileHashCache.set(filePath, hashResult.fileHash);
   return hashResult.fileHash;
-}
-
-/**
- * Escreve um erro no arquivo de log e no console
- * Evita duplicação verificando se a mensagem já foi logada nesta execução
- * Também verifica se já existe no arquivo para evitar duplicação entre execuções
- */
-function logError(fileName: string, error: string): void {
-  // Criar chave única para evitar duplicação dentro da mesma execução
-  const messageKey = `${fileName}|${error}`;
-
-  // Se já foi logado nesta execução, não logar novamente
-  if (loggedMessages.has(messageKey)) {
-    return;
-  }
-
-  // Verificar se já existe no arquivo (para evitar duplicação entre execuções)
-  try {
-    if (existsSync(LOG_FILE)) {
-      const fileContent = readFileSync(LOG_FILE, 'utf-8');
-      const searchPattern = `${fileName} | ${error}`;
-      if (fileContent.includes(searchPattern)) {
-        // Já existe no arquivo, apenas marcar como logado e não escrever novamente
-        loggedMessages.add(messageKey);
-        console.error(`  ✗ ${fileName}: ${error}`);
-        return;
-      }
-    }
-  } catch {
-    // Se falhar ao ler arquivo, continuar normalmente
-  }
-
-  // Marcar como logado ANTES de escrever para evitar race conditions
-  loggedMessages.add(messageKey);
-
-  try {
-    // Garantir que o diretório existe
-    if (!existsSync(LOG_DIR)) {
-      mkdirSync(LOG_DIR, { recursive: true });
-    }
-
-    // Escrever no arquivo apenas uma vez
-    const timestamp = new Date().toISOString();
-    const logLine = `[${timestamp}] ${fileName} | ${error}\n`;
-
-    appendFileSync(LOG_FILE, logLine, 'utf-8');
-
-    // Exibir no console apenas após escrever no arquivo com sucesso
-    console.error(`  ✗ ${fileName}: ${error}`);
-  } catch (logErr) {
-    // Se falhar ao escrever log, apenas imprime no console (sem duplicar)
-    const errorKey = `LOG_WRITE_ERROR|${fileName}|${error}`;
-    if (!loggedMessages.has(errorKey)) {
-      loggedMessages.add(errorKey);
-      console.error(`  ✗ ${fileName}: ${error}`);
-      console.error('Erro ao escrever log:', logErr);
-    }
-  }
-}
-
-/**
- * Escreve o nome de um arquivo no log de auditoria
- * Evita duplicação verificando se o arquivo já foi logado
- */
-function logAuditFile(fileName: string, reason: string): void {
-  // Se já foi logado nesta execução, não logar novamente
-  if (loggedAuditFiles.has(fileName)) {
-    return;
-  }
-
-  // Verificar se já existe no arquivo (para evitar duplicação entre execuções)
-  try {
-    if (existsSync(AUDIT_LOG_FILE)) {
-      const fileContent = readFileSync(AUDIT_LOG_FILE, 'utf-8');
-      if (fileContent.includes(fileName)) {
-        // Já existe no arquivo, apenas marcar como logado
-        loggedAuditFiles.add(fileName);
-        return;
-      }
-    }
-  } catch {
-    // Se falhar ao ler arquivo, continuar normalmente
-  }
-
-  // Marcar como logado ANTES de escrever para evitar race conditions
-  loggedAuditFiles.add(fileName);
-
-  try {
-    // Garantir que o diretório existe
-    if (!existsSync(LOG_DIR)) {
-      mkdirSync(LOG_DIR, { recursive: true });
-    }
-
-    // Escrever no arquivo apenas uma vez
-    // const timestamp = new Date().toISOString();
-    const logLine = `${fileName} | ${reason}\n`;
-
-    appendFileSync(AUDIT_LOG_FILE, logLine, 'utf-8');
-  } catch (logErr) {
-    // Se falhar ao escrever log, apenas imprime no console (sem duplicar)
-    const errorKey = `AUDIT_LOG_WRITE_ERROR|${fileName}`;
-    if (!loggedMessages.has(errorKey)) {
-      loggedMessages.add(errorKey);
-      console.error(`Erro ao escrever log de auditoria para ${fileName}:`, logErr);
-    }
-  }
-}
-
-/**
- * Converte uma Date para string no formato YYYY-MM-DD
- */
-function formatDateForFilter(date: Date | null): string | null {
-  if (!date) return null;
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-/**
- * Verifica se um registro atende aos filtros de auditoria
- * Verifica creditDate e regional conforme os filtros definidos
- */
-function matchesAuditFilter(creditDate: Date | null, regional: string): boolean {
-  if (!creditDate) return false;
-
-  const dateStr = formatDateForFilter(creditDate);
-  if (!dateStr) return false;
-
-  // Verificar se atende a algum filtro
-  for (const filter of saveLogFilters) {
-    // Verificar creditDate
-    let dateMatches = false;
-    if (filter.creditDate) {
-      if (Array.isArray(filter.creditDate)) {
-        dateMatches = filter.creditDate.includes(dateStr);
-      } else {
-        dateMatches = filter.creditDate === dateStr;
-      }
-    } else {
-      dateMatches = true; // Se não há filtro de creditDate, aceita qualquer data
-    }
-
-    // Verificar regional
-    let regionalMatches = false;
-    if (filter.regional) {
-      if (Array.isArray(filter.regional)) {
-        regionalMatches = filter.regional.includes(regional);
-      } else {
-        regionalMatches = filter.regional === regional;
-      }
-    } else {
-      regionalMatches = true; // Se não há filtro de regional, aceita qualquer regional
-    }
-
-    // Se ambos os filtros correspondem (ou não existem), o registro atende
-    if (dateMatches && regionalMatches) {
-      return true;
-    }
-  }
-
-  return false;
 }
 
 /**
@@ -555,21 +399,21 @@ async function processCNAB240File(
             lineNumber: line.number,
           });
         } else {
-          logError(fileName, `Segmento U sem T correspondente na linha ${line.number}`);
+          logError(fileName, `Segmento U sem T correspondente na linha ${line.number}`, logErrorOpts);
         }
       } else {
-        logError(fileName, `Segmento U sem T correspondente na linha ${line.number}`);
+        logError(fileName, `Segmento U sem T correspondente na linha ${line.number}`, logErrorOpts);
       }
       currentSegmentT = null;
     } else if (currentSegmentT) {
       // Se encontrou outro tipo de segmento após T, descartar o T
-      logError(fileName, `Segmento T sem U correspondente na linha ${line.number}`);
+      logError(fileName, `Segmento T sem U correspondente na linha ${line.number}`, logErrorOpts);
       currentSegmentT = null;
     }
   }
 
   if (tuPairs.length === 0) {
-    logError(fileName, 'Nenhum par T/U encontrado, pulando salvamento...');
+    logError(fileName, 'Nenhum par T/U encontrado, pulando salvamento...', logErrorOpts);
     return;
   }
 
@@ -594,7 +438,13 @@ async function processCNAB240File(
   const fileHash = await getFileHash(filePath);
 
   // Inserir registros no banco
-  await insertCNAB240RecordsToDatabase(fileName, result.cnabType, cnabData.header.generationDate, tuPairs, fileHash);
+  const { auditInfo } = await insertCNAB240RecordsToDatabase(fileName, result.cnabType, cnabData.header.generationDate, tuPairs, fileHash, logErrorOpts);
+
+  // Se atende aos filtros de auditoria: mover para <AUDIT_DIR>/<dd>/<regional>/ e registrar no log
+  if (auditInfo) {
+    await moveFileToAuditFolder({ sourceFilePath: filePath, jsonPath, day: auditInfo.day, regional: auditInfo.regional, auditDir: AUDIT_DIR });
+    logAuditFile(fileName, auditInfo.reason, logAuditFileOpts);
+  }
 
   stats.processedFiles++;
   stats.totalRecords += tuPairs.length;
@@ -626,7 +476,7 @@ async function processCNAB400File(
   }
 
   if (detalhes.length === 0) {
-    logError(fileName, 'Nenhum detalhe encontrado, pulando salvamento...');
+    logError(fileName, 'Nenhum detalhe encontrado, pulando salvamento...', logErrorOpts);
     return;
   }
 
@@ -650,7 +500,13 @@ async function processCNAB400File(
   const fileHash = await getFileHash(filePath);
 
   // Inserir registros no banco
-  await insertCNAB400RecordsToDatabase(fileName, result.cnabType, cnabData.header, detalhes, fileHash);
+  const { auditInfo } = await insertCNAB400RecordsToDatabase(fileName, result.cnabType, cnabData.header, detalhes, fileHash, logErrorOpts);
+
+  // Se atende aos filtros de auditoria: mover para <AUDIT_DIR>/<dd>/<regional>/ e registrar no log
+  if (auditInfo) {
+    await moveFileToAuditFolder({ sourceFilePath: filePath, jsonPath, day: auditInfo.day, regional: auditInfo.regional, auditDir: AUDIT_DIR });
+    logAuditFile(fileName, auditInfo.reason, logAuditFileOpts);
+  }
 
   stats.processedFiles++;
   stats.totalRecords += detalhes.length;
@@ -675,7 +531,7 @@ async function processFile(filePath: string): Promise<void> {
 
     // Processar apenas arquivos CNAB 240 ou CNAB 400
     if (result.cnabType === 'UNKNOWN') {
-      logError(fileName, 'Tipo de arquivo desconhecido, pulando...');
+      logError(fileName, 'Tipo de arquivo desconhecido, pulando...', logErrorOpts);
       return;
     }
 
@@ -708,248 +564,117 @@ async function processFile(filePath: string): Promise<void> {
     const errorMessage = error instanceof Error ? error.message : String(error);
     stats.failedFiles++;
     stats.errors.push({ file: filePath, error: errorMessage });
-    logError(fileName, errorMessage);
+    logError(fileName, errorMessage, logErrorOpts);
   }
 }
 
 /**
- * Insere registros CNAB 240 no banco de dados
+ * Mapeia pares T/U (CNAB 240) para AuditReturnRecord e chama upsertAuditRecords.
  */
 async function insertCNAB240RecordsToDatabase(
   fileName: string,
   cnabType: string,
   fileGenerationDate: string | undefined,
   tuPairs: Array<{ segmentT: SegmentoT; segmentU: SegmentoU; lineNumber: number }>,
-  fileHash: string
-): Promise<void> {
-  const records = tuPairs.map(pair => {
+  fileHash: string,
+  logErrorOpts: LogErrorOpts
+): Promise<{ auditInfo: { regional: string; day: string; reason: string } | null }> {
+  const records: AuditReturnRecord[] = tuPairs.map((pair) => {
     const { segmentT, segmentU, lineNumber } = pair;
     const recordHash = generateRecordHash(fileHash, lineNumber);
     const agreement = segmentT.agreement;
-
     return {
       recordHash,
       regional: getRegionalByAgreement(agreement),
       fileName,
       cnabType,
       lineNumber,
-
-      // Banco e Convênio
       bankCode: segmentT.bankCode,
       agreement,
       lotCode: segmentT.lotCode,
-
-      // Título
       regionalNumber: segmentT.regionalNumber,
       regionalNumberDigit: segmentT.regionalNumberDigit,
       titleNumber: segmentT.titleNumber || null,
       titlePortfolio: segmentT.titlePortfolio || null,
       titleType: segmentT.titleType || null,
-
-      // Conta bancária
       agency: segmentT.agency || null,
       agencyDigit: segmentT.agencyDigit || null,
       account: segmentT.account || null,
       accountDigit: segmentT.accountDigit || null,
-
-      // Pagador
       payerName: segmentT.payerName || null,
       payerRegistration: segmentT.payerRegistration || null,
       payerRegistrationType: segmentT.payerRegistrationType || null,
-
-      // Movimentação
       movementCode: segmentT.movementCode,
-      occurrenceCode: null, // occurrenceCode não está disponível no SegmentoU
-
-      // Valores do Segmento T - confiando totalmente no serviço read-ret-file
+      occurrenceCode: null,
       receivedValue: segmentT.receivedValue ?? null,
       tariff: segmentT.tariff ?? null,
-
-      // Valores do Segmento U - confiando totalmente no serviço read-ret-file
       accruedInterest: segmentU.accruedInterest ?? null,
       discountAmount: segmentU.discountAmount ?? null,
       dischargeAmount: segmentU.dischargeAmount ?? null,
       paidAmount: segmentU.paidAmount ?? null,
       otherExpenses: segmentU.otherExpenses ?? null,
       otherCredits: segmentU.otherCredits ?? null,
-      netCreditValue: segmentU.receivedValue ?? null, // Valor líquido creditado
-
-      // Datas
+      netCreditValue: segmentU.receivedValue ?? null,
       paymentDate: parseCnabDate(segmentU.paymentDate),
       creditDate: parseCnabDate(segmentU.creditDate),
-
-      // Metadados
       fileGenerationDate: fileGenerationDate || null,
     };
   });
-
-  // Verificar se algum registro atende aos filtros de auditoria
-  // Verifica apenas creditDate conforme os filtros definidos
-  let shouldLogAudit = false;
-  let auditReason = '';
-  for (const record of records) {
-    if (record.creditDate && matchesAuditFilter(record.creditDate, record.regional)) {
-      shouldLogAudit = true;
-      auditReason = `CNAB240, ${record.bankCode || 'N/A'}, ${formatDateForFilter(record.creditDate)}, ${record.regional}`;
-      break;
-    }
-  }
-
-  // Se encontrou registro que atende aos filtros, logar o arquivo
-  if (shouldLogAudit) {
-    logAuditFile(fileName, auditReason);
-  }
-
-  // Inserir/atualizar usando upsert com concorrência limitada (evita esgotar pool de conexões)
-  const queue = new PQueue({ concurrency: UPSERT_CONCURRENCY });
-  let upserted = 0;
-  let errors = 0;
-
-  // Adicionar todos os upserts na fila com concorrência limitada
-  const upsertPromises = records.map((record) =>
-    queue.add(async () => {
-      try {
-        await prisma.auditReturn.upsert({
-          where: { recordHash: record.recordHash },
-          update: record, // Atualiza se já existir
-          create: record, // Cria se não existir
-        });
-        upserted++;
-        return { success: true };
-      } catch (err) {
-        errors++;
-        const errorMsg = err instanceof Error ? err.message : String(err);
-        logError(fileName, `Erro ao fazer upsert registro linha ${record.lineNumber}: ${errorMsg}`);
-        return { success: false };
-      }
-    })
-  );
-
-  // Aguardar todos os upserts completarem
-  await Promise.all(upsertPromises);
-
-  stats.insertedRecords += upserted;
-  console.log(`  ✓ ${upserted}/${records.length} registros processados${errors > 0 ? ` (${errors} erros)` : ''}`);
+  return upsertAuditRecords({ fileName, records, logErrorOpts });
 }
 
 /**
- * Insere registros CNAB 400 no banco de dados
+ * Mapeia detalhes (CNAB 400) para AuditReturnRecord e chama upsertAuditRecords.
  */
 async function insertCNAB400RecordsToDatabase(
   fileName: string,
   cnabType: string,
   header: CNAB400['header'],
   detalhes: Array<{ detalhe: DetalheCNAB400; lineNumber: number }>,
-  fileHash: string
-): Promise<void> {
-  const records = detalhes.map(({ detalhe, lineNumber }) => {
+  fileHash: string,
+  logErrorOpts: LogErrorOpts
+): Promise<{ auditInfo: { regional: string; day: string; reason: string } | null }> {
+  const records: AuditReturnRecord[] = detalhes.map(({ detalhe, lineNumber }) => {
     const recordHash = generateRecordHash(fileHash, lineNumber);
     const agreement = detalhe.agreement;
-
-    // CNAB 400 não tem alguns campos do CNAB 240, então usamos null
     return {
       recordHash,
       regional: getRegionalByAgreement(agreement),
       fileName,
       cnabType,
       lineNumber,
-
-      // Banco e Convênio
       bankCode: header.bankCode || '',
       agreement,
-      lotCode: '', // CNAB 400 não tem lote
-
-      // Título
+      lotCode: '',
       regionalNumber: detalhe.regionalNumber,
       regionalNumberDigit: detalhe.regionalNumberDigit,
-      titleNumber: null, // CNAB 400 não tem este campo separado
+      titleNumber: null,
       titlePortfolio: null,
       titleType: null,
-
-      // Conta bancária
       agency: detalhe.agency || null,
       agencyDigit: detalhe.agencyDigit || null,
       account: detalhe.account || null,
       accountDigit: detalhe.accountDigit || null,
-
-      // Pagador - CNAB 400 não tem estes campos
       payerName: null,
       payerRegistration: null,
       payerRegistrationType: null,
-
-      // Movimentação
       movementCode: detalhe.movementCode || '',
       occurrenceCode: null,
-
-      // Valores do Segmento T (CNAB 400 tem apenas receivedValue e tariff)
       receivedValue: detalhe.receivedValue || null,
       tariff: detalhe.tariff || null,
-
-      // Valores do Segmento U - CNAB 400 não tem estes campos detalhados
       accruedInterest: null,
       discountAmount: null,
       dischargeAmount: null,
-      paidAmount: null, // CNAB 400 não diferencia valor pago do creditado
+      paidAmount: null,
       otherExpenses: null,
       otherCredits: null,
-      netCreditValue: detalhe.receivedValue || null, // No CNAB 400, receivedValue é o valor creditado
-
-      // Datas - expandir ano de 2 para 4 dígitos se necessário
+      netCreditValue: detalhe.receivedValue || null,
       paymentDate: parseCnabDate(detalhe.paymentDate ? expandYear(detalhe.paymentDate) : null),
       creditDate: parseCnabDate(detalhe.creditDate ? expandYear(detalhe.creditDate) : null),
-
-      // Metadados
       fileGenerationDate: header.generationDate ? expandYear(header.generationDate) : null,
     };
   });
-
-  // Verificar se algum registro atende aos filtros de auditoria
-  // Verifica apenas creditDate conforme os filtros definidos
-  let shouldLogAudit = false;
-  let auditReason = '';
-  for (const record of records) {
-    if (record.creditDate && matchesAuditFilter(record.creditDate, record.regional)) {
-      shouldLogAudit = true;
-      auditReason = `CNAB400, ${record.bankCode || 'N/A'}, ${formatDateForFilter(record.creditDate)}, ${record.regional}`;
-      break;
-    }
-  }
-
-  // Se encontrou registro que atende aos filtros, logar o arquivo
-  if (shouldLogAudit) {
-    logAuditFile(fileName, auditReason);
-  }
-
-  // Inserir/atualizar usando upsert com concorrência limitada (evita esgotar pool de conexões)
-  const queue = new PQueue({ concurrency: UPSERT_CONCURRENCY });
-  let upserted = 0;
-  let errors = 0;
-
-  // Adicionar todos os upserts na fila com concorrência limitada
-  const upsertPromises = records.map((record) =>
-    queue.add(async () => {
-      try {
-        await prisma.auditReturn.upsert({
-          where: { recordHash: record.recordHash },
-          update: record, // Atualiza se já existir
-          create: record, // Cria se não existir
-        });
-        upserted++;
-        return { success: true };
-      } catch (err) {
-        errors++;
-        const errorMsg = err instanceof Error ? err.message : String(err);
-        logError(fileName, `Erro ao fazer upsert registro linha ${record.lineNumber}: ${errorMsg}`);
-        return { success: false };
-      }
-    })
-  );
-
-  // Aguardar todos os upserts completarem
-  await Promise.all(upsertPromises);
-
-  stats.insertedRecords += upserted;
-  console.log(`  ✓ ${upserted}/${records.length} registros processados${errors > 0 ? ` (${errors} erros)` : ''}`);
+  return upsertAuditRecords({ fileName, records, logErrorOpts });
 }
 
 /**
@@ -1026,6 +751,6 @@ async function main(): Promise<void> {
 main().catch(error => {
   const errorMsg = error instanceof Error ? error.message : String(error);
   console.error('\n✗ Erro fatal:');
-  logError('SCRIPT_FATAL', errorMsg);
+  logError('SCRIPT_FATAL', errorMsg, logErrorOpts);
   process.exit(1);
 });
