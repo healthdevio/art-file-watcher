@@ -13,6 +13,7 @@ export const saveLogFilters: SaveLogFilter[] = [
   { creditDate: '2026-01-02', regional: 'BA' },
   { creditDate: '2026-01-15', regional: 'PR' },
   { creditDate: '2026-01-15', regional: 'BA' },
+  { regional: ['BA', 'PR'] },
 ]
 
 export const agreementToRegional = [

@@ -38,6 +38,7 @@ function normalizeDay(day: string): string {
  * Move o arquivo CNAB e seu JSON para <AUDIT_DIR>/<dd>/<regional>/*
  * Cria o diretório de destino se não existir.
  * Se o arquivo já estiver nesse diretório, não faz nada.
+ * Se o arquivo já existir no destino, ignora a movimentação.
  */
 export async function moveFileToAuditFolder(opts: MoveToAuditFolderOpts): Promise<void> {
   const { sourceFilePath, jsonPath, day, regional, auditDir } = opts;
@@ -56,9 +57,18 @@ export async function moveFileToAuditFolder(opts: MoveToAuditFolderOpts): Promis
     const destPath = join(destDir, basename(sourceFilePath));
     const destJsonPath = join(destDir, basename(jsonPath));
 
+    // Verifica se o arquivo já existe no destino
+    if (existsSync(destPath)) {
+      // Arquivo já existe no destino, ignora a movimentação
+      return;
+    }
+
     await rename(sourceFilePath, destPath);
     if (existsSync(jsonPath)) {
-      await rename(jsonPath, destJsonPath);
+      // Verifica se o JSON já existe no destino antes de mover
+      if (!existsSync(destJsonPath)) {
+        await rename(jsonPath, destJsonPath);
+      }
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
