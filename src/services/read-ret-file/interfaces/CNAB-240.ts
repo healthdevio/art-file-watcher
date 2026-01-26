@@ -76,6 +76,7 @@ export type SegmentoT = CommonRecordFields &
     payerName: string;
     occurrenceReason?: string;
     titleCompanyNumber?: string;
+    docNumber: string;
   };
 
 /**

@@ -26,6 +26,7 @@ export const SEGMENTO_T_SCHEMA_PADRAO_V033: LineSchema<SegmentoT> = {
   regionalNumber: { start: 38, end: 56, extractor: 'string', formatter: normalizeTrim },
   regionalNumberDigit: { start: 56, end: 57, extractor: 'string' },
   titleNumber: { start: 56, end: 73, extractor: 'string', formatter: normalizeTrim },
+  docNumber: { start: 58, end: 69, extractor: 'string', formatter: normalizeTrim },
   overdueDate: { start: 73, end: 81, extractor: 'date' },
   titlePortfolio: { start: 73, end: 76, extractor: 'string' },
   titleType: { start: 76, end: 77, extractor: 'string' },

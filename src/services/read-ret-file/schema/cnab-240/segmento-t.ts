@@ -1,4 +1,4 @@
-import { normalizeAccount, normalizeAgency } from '../../helpers/formatters';
+import { normalizeAccount, normalizeAgency, normalizeTrim } from '../../helpers/formatters';
 import { SegmentoT } from '../../interfaces/CNAB-240';
 import { LineSchema } from '../core/types';
 
@@ -37,4 +37,10 @@ export const SEGMENTO_T_SCHEMA: LineSchema<SegmentoT> = {
   receivedValue: { start: 82, end: 97, extractor: 'monetary' },
   // Campo 27.3T: Valor da Tarifa / Custas - posições 200-214 (base 1) = 199-213 (base 0), mas end exclusivo = 199-214 (base 0)
   tariff: { start: 199, end: 214, extractor: 'monetary' },
+
+  // não testados
+  occurrenceReason: { start: 213, end: 223, extractor: 'string', formatter: normalizeTrim },
+  titleCompanyNumber: { start: 105, end: 130, extractor: 'string', formatter: normalizeTrim },
+  docNumber: { start: 58, end: 69, extractor: 'string', formatter: normalizeTrim },
+  overdueDate: { start: 73, end: 81, extractor: 'date' },
 };
