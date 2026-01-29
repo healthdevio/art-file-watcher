@@ -18,6 +18,7 @@
     "dev": "tsx watch src/index.ts",
     "lint": "eslint src/**/*.ts --fix",
     "bindir": "node scripts/create-bin-dir.mjs",
+    "extract": "tsx scripts/extract/index.ts",
     "build": "tsc",
     "bundle": "node scripts/bundle.mjs",
     "pkg:linux": "npm run bundle && npm run bindir && pkg --targets node18-linux-x64 --output ./bin/art-w dist/bundle.js",

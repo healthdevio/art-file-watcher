@@ -25,9 +25,9 @@ export function getDayFromDateStr(dateStr: string): string {
 
 /**
  * Verifica se um registro atende aos filtros de auditoria
- * (creditDate e regional conforme saveLogFilters).
+ * (creditDate, regional e bankCode conforme saveLogFilters).
  */
-export function matchesAuditFilter(creditDate: Date | null, regional: string): boolean {
+export function matchesAuditFilter(creditDate: Date | null, regional: string, bankCode?: string): boolean {
   if (!creditDate) return false;
 
   const dateStr = formatDateForFilter(creditDate);
@@ -56,7 +56,20 @@ export function matchesAuditFilter(creditDate: Date | null, regional: string): b
       regionalOk = true;
     }
 
-    if (dateOk && regionalOk) return true;
+    let bankCodeOk = false;
+    if (filter.bankCode) {
+      if (bankCode === undefined || bankCode === null) {
+        bankCodeOk = false;
+      } else if (Array.isArray(filter.bankCode)) {
+        bankCodeOk = filter.bankCode.includes(bankCode);
+      } else {
+        bankCodeOk = filter.bankCode === bankCode;
+      }
+    } else {
+      bankCodeOk = true;
+    }
+
+    if (dateOk && regionalOk && bankCodeOk) return true;
   }
 
   return false;

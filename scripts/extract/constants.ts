@@ -7,13 +7,14 @@ export const CNAB_BLACKLIST_EXTENSIONS = ['.json', '.log', '.txt'];
 // Altere apenas esta linha para mudar o filtro
 export const FILE_TYPE_FILTER: 'CNAB400' | 'CNAB240' | 'ALL' = 'ALL';
 
-type SaveLogFilter = { creditDate?: string | string[]; regional?: string | string[]; }
+type SaveLogFilter = { creditDate?: string | string[]; regional?: string | string[]; bankCode?: string | string[]; }
 export const saveLogFilters: SaveLogFilter[] = [
-  { creditDate: '2026-01-02', regional: 'PR' },
-  { creditDate: '2026-01-02', regional: 'BA' },
-  { creditDate: '2026-01-15', regional: 'PR' },
-  { creditDate: '2026-01-15', regional: 'BA' },
-  { regional: ['BA', 'PR'] },
+  // { creditDate: '2026-01-02', regional: 'PR' },
+  // { creditDate: '2026-01-02', regional: 'BA' },
+  // { creditDate: '2026-01-15', regional: 'PR' },
+  // { creditDate: '2026-01-15', regional: 'BA' },
+  // { regional: ['BA', 'PR'] },
+  { bankCode: '001' },
 ]
 
 export const agreementToRegional = [

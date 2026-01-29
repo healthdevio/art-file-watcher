@@ -25,8 +25,9 @@ import { formatDateForFilter, getDayFromDateStr, matchesAuditFilter } from './fi
 import { logAuditFile, logError, type LogErrorOpts } from './logs';
 
 // Configurações hardcoded conforme especificado
+const AUDIT_DIR = resolve(__dirname, '../../volumes/audit/2026-01');
 // const AUDIT_DIR = resolve(__dirname, '../../volumes/audit/2026-01-22');
-const AUDIT_DIR = resolve(__dirname, '../../volumes/audit/2025-12');
+// const AUDIT_DIR = resolve(__dirname, '../../volumes/audit/2025-12');
 const LOG_DIR = resolve(__dirname, '../../volumes/audit/logs');
 const LOG_FILE = join(LOG_DIR, `errors_${new Date().toISOString().split('T')[0]}.log`);
 const AUDIT_LOG_FILE = join(LOG_DIR, `audit_files_${new Date().toISOString().split('T')[0]}.log`);
@@ -148,7 +149,7 @@ async function upsertAuditRecords(opts: {
 
   let auditInfo: { regional: string; day: string; reason: string } | null = null;
   for (const r of records) {
-    if (r.creditDate && matchesAuditFilter(r.creditDate, r.regional)) {
+    if (r.creditDate && matchesAuditFilter(r.creditDate, r.regional, r.bankCode)) {
       const dateStr = formatDateForFilter(r.creditDate)!;
       auditInfo = {
         regional: r.regional,
