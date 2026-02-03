@@ -16,6 +16,22 @@ export function formatDateForFilter(date: Date | null): string | null {
 }
 
 /**
+ * Extrai o ano (yyyy) de uma string YYYY-MM-DD.
+ */
+export function getYearFromDateStr(dateStr: string): string {
+  const parts = dateStr.split('-');
+  return (parts[0] && parts[0].length >= 4) ? parts[0] : '';
+}
+
+/**
+ * Extrai o mês (mm) de uma string YYYY-MM-DD.
+ */
+export function getMonthFromDateStr(dateStr: string): string {
+  const parts = dateStr.split('-');
+  return (parts[1] && parts[1].length >= 2) ? parts[1] : '01';
+}
+
+/**
  * Extrai o dia (dd) de uma string YYYY-MM-DD.
  */
 export function getDayFromDateStr(dateStr: string): string {

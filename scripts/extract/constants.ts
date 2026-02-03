@@ -13,8 +13,11 @@ export const saveLogFilters: SaveLogFilter[] = [
   // { creditDate: '2026-01-02', regional: 'BA' },
   // { creditDate: '2026-01-15', regional: 'PR' },
   // { creditDate: '2026-01-15', regional: 'BA' },
-  // { regional: ['BA', 'PR'] },
-  { bankCode: '001' },
+  // { regional: ['BA', 'PR'] }, 
+  {
+    bankCode: ['001', '104'],
+    regional: ['MS', 'BA', 'PR', 'ES', 'AC', 'AL', 'AM', 'AP', 'DF', 'CE', 'ES', 'GO', 'MA', 'MG', 'MT', 'RN', 'PB', 'PE', 'PI', 'PR', 'RJ', 'RO', 'RR', 'TO', 'CE', 'MA', 'RN', 'SE']
+  },
 ]
 
 export const agreementToRegional = [

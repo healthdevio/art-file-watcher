@@ -21,11 +21,12 @@ import { ReadRetFileService } from '../../src/services/read-ret-file/read-ret-fi
 import { adjustToBrasiliaTimezone, tryDate } from '../../src/services/read-ret-file/schema/core/date-utils';
 import { moveFileToAuditFolder } from './audit';
 import { agreementToRegional, CNAB_BLACKLIST_EXTENSIONS, FILE_TYPE_FILTER } from './constants';
-import { formatDateForFilter, getDayFromDateStr, matchesAuditFilter } from './filters';
+import { formatDateForFilter, getDayFromDateStr, getMonthFromDateStr, getYearFromDateStr, matchesAuditFilter } from './filters';
 import { logAuditFile, logError, type LogErrorOpts } from './logs';
 
 // Configurações hardcoded conforme especificado
 const AUDIT_DIR = resolve(__dirname, '../../volumes/audit/2026-01');
+// const AUDIT_DIR = resolve(__dirname, '../../volumes/audit/BB 2026-01');
 // const AUDIT_DIR = resolve(__dirname, '../../volumes/audit/2026-01-22');
 // const AUDIT_DIR = resolve(__dirname, '../../volumes/audit/2025-12');
 const LOG_DIR = resolve(__dirname, '../../volumes/audit/logs');
@@ -144,16 +145,20 @@ async function upsertAuditRecords(opts: {
   fileName: string;
   records: AuditReturnRecord[];
   logErrorOpts: LogErrorOpts;
-}): Promise<{ auditInfo: { regional: string; day: string; reason: string } | null }> {
+}): Promise<{ auditInfo: { regional: string; day: string; year: string; month: string; bankCode: string; reason: string } | null }> {
   const { fileName, records, logErrorOpts } = opts;
 
-  let auditInfo: { regional: string; day: string; reason: string } | null = null;
+  type AuditInfo = { regional: string; day: string; year: string; month: string; bankCode: string; reason: string };
+  let auditInfo: AuditInfo | null = null;
   for (const r of records) {
     if (r.creditDate && matchesAuditFilter(r.creditDate, r.regional, r.bankCode)) {
       const dateStr = formatDateForFilter(r.creditDate)!;
       auditInfo = {
         regional: r.regional,
         day: getDayFromDateStr(dateStr),
+        year: getYearFromDateStr(dateStr),
+        month: getMonthFromDateStr(dateStr),
+        bankCode: r.bankCode || '',
         reason: `${r.cnabType}, ${r.bankCode || 'N/A'}, ${dateStr}, ${r.regional}`,
       };
       break;
@@ -442,9 +447,19 @@ async function processCNAB240File(
   // Inserir registros no banco
   const { auditInfo } = await insertCNAB240RecordsToDatabase(fileName, result.cnabType, cnabData.header, tuPairs, fileHash, logErrorOpts);
 
-  // Se atende aos filtros de auditoria: mover para <AUDIT_DIR>/<dd>/<regional>/ e registrar no log
+  // Se atende aos filtros de auditoria: mover para <out_dir>/<year>/<month>/<day>/<regional>/<bankCode>/ e registrar no log
+  // Se o arquivo já estiver nessa pasta de saída, apenas reprocessa o JSON (moveFileToAuditFolder ignora a movimentação)
   if (auditInfo) {
-    await moveFileToAuditFolder({ sourceFilePath: filePath, jsonPath, day: auditInfo.day, regional: auditInfo.regional, auditDir: AUDIT_DIR });
+    await moveFileToAuditFolder({
+      sourceFilePath: filePath,
+      jsonPath,
+      year: auditInfo.year,
+      month: auditInfo.month,
+      day: auditInfo.day,
+      regional: auditInfo.regional,
+      bankCode: auditInfo.bankCode,
+      auditDir: AUDIT_DIR,
+    });
     logAuditFile(fileName, auditInfo.reason, logAuditFileOpts);
   }
 
@@ -504,9 +519,19 @@ async function processCNAB400File(
   // Inserir registros no banco
   const { auditInfo } = await insertCNAB400RecordsToDatabase(fileName, result.cnabType, cnabData.header, detalhes, fileHash, logErrorOpts);
 
-  // Se atende aos filtros de auditoria: mover para <AUDIT_DIR>/<dd>/<regional>/ e registrar no log
+  // Se atende aos filtros de auditoria: mover para <out_dir>/<year>/<month>/<day>/<regional>/<bankCode>/ e registrar no log
+  // Se o arquivo já estiver nessa pasta de saída, apenas reprocessa o JSON (moveFileToAuditFolder ignora a movimentação)
   if (auditInfo) {
-    await moveFileToAuditFolder({ sourceFilePath: filePath, jsonPath, day: auditInfo.day, regional: auditInfo.regional, auditDir: AUDIT_DIR });
+    await moveFileToAuditFolder({
+      sourceFilePath: filePath,
+      jsonPath,
+      year: auditInfo.year,
+      month: auditInfo.month,
+      day: auditInfo.day,
+      regional: auditInfo.regional,
+      bankCode: auditInfo.bankCode,
+      auditDir: AUDIT_DIR,
+    });
     logAuditFile(fileName, auditInfo.reason, logAuditFileOpts);
   }
 
@@ -580,7 +605,7 @@ async function insertCNAB240RecordsToDatabase(
   tuPairs: Array<{ segmentT: SegmentoT; segmentU: SegmentoU; lineNumber: number }>,
   fileHash: string,
   logErrorOpts: LogErrorOpts
-): Promise<{ auditInfo: { regional: string; day: string; reason: string } | null }> {
+): Promise<{ auditInfo: { regional: string; day: string; year: string; month: string; bankCode: string; reason: string } | null }> {
   const records: AuditReturnRecord[] = tuPairs.map((pair) => {
     const { segmentT, segmentU, lineNumber } = pair;
     const recordHash = generateRecordHash(fileHash, lineNumber);
@@ -635,7 +660,7 @@ async function insertCNAB400RecordsToDatabase(
   detalhes: Array<{ detalhe: DetalheCNAB400; lineNumber: number }>,
   fileHash: string,
   logErrorOpts: LogErrorOpts
-): Promise<{ auditInfo: { regional: string; day: string; reason: string } | null }> {
+): Promise<{ auditInfo: { regional: string; day: string; year: string; month: string; bankCode: string; reason: string } | null }> {
   const records: AuditReturnRecord[] = detalhes.map(({ detalhe, lineNumber }) => {
     const recordHash = generateRecordHash(fileHash, lineNumber);
     const agreement = detalhe.agreement;

@@ -1,19 +1,26 @@
 /**
  * Módulo de auditoria: move arquivos filtrados para estrutura
- * <AUDIT_DIR>/<dd>/<regional>/*
+ * <out_dir>/<year>/<month>/<day>/<regional>/<bankCode>/*
  */
 
-import { mkdir, rename } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { mkdir, rename } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 
 export interface MoveToAuditFolderOpts {
   sourceFilePath: string;
   jsonPath: string;
+  /** Ano em 4 dígitos (yyyy) do creditDate */
+  year: string;
+  /** Mês em 2 dígitos (mm) do creditDate */
+  month: string;
   /** Dia em 2 dígitos (dd) do creditDate */
   day: string;
   /** Código da regional (PR, BA, etc.) */
   regional: string;
+  /** Código do banco (001, 341, etc.) */
+  bankCode: string;
+  /** Diretório raiz de saída (out_dir) */
   auditDir: string;
 }
 
@@ -26,6 +33,14 @@ function normalizeRegionalForPath(regional: string): string {
 }
 
 /**
+ * Sanitiza o código do banco para uso em path (evita / ou \ e trata vazios).
+ */
+function normalizeBankCodeForPath(bankCode: string): string {
+  if (!bankCode || bankCode.trim() === '') return 'N/A';
+  return bankCode.replace(/[/\\]/g, '_').trim();
+}
+
+/**
  * Garante que o dia está em 2 dígitos.
  */
 function normalizeDay(day: string): string {
@@ -35,21 +50,42 @@ function normalizeDay(day: string): string {
 }
 
 /**
- * Move o arquivo CNAB e seu JSON para <AUDIT_DIR>/<dd>/<regional>/*
+ * Garante que o mês está em 2 dígitos.
+ */
+function normalizeMonth(month: string): string {
+  const n = parseInt(month, 10);
+  if (isNaN(n) || n < 1 || n > 12) return '01';
+  return String(n).padStart(2, '0');
+}
+
+/**
+ * Retorna o diretório de destino para a estrutura
+ * <out_dir>/<year>/<month>/<day>/<regional>/<bankCode>
+ */
+export function getAuditDestDir(opts: Omit<MoveToAuditFolderOpts, 'sourceFilePath' | 'jsonPath'>): string {
+  const { year, month, day, regional, bankCode, auditDir } = opts;
+  const safeRegional = normalizeRegionalForPath(regional);
+  const safeBankCode = normalizeBankCodeForPath(bankCode);
+  const dd = normalizeDay(day);
+  const mm = normalizeMonth(month);
+  const yyyy = year && year.length >= 4 ? year : new Date().getFullYear().toString();
+  return join(auditDir, yyyy, mm, dd, safeRegional, safeBankCode);
+}
+
+/**
+ * Move o arquivo CNAB e seu JSON para <out_dir>/<year>/<month>/<day>/<regional>/<bankCode>/*
  * Cria o diretório de destino se não existir.
- * Se o arquivo já estiver nesse diretório, não faz nada.
+ * Se o arquivo já estiver nesse diretório, não faz movimentação (apenas reprocessa JSON no fluxo do caller).
  * Se o arquivo já existir no destino, ignora a movimentação.
  */
 export async function moveFileToAuditFolder(opts: MoveToAuditFolderOpts): Promise<void> {
-  const { sourceFilePath, jsonPath, day, regional, auditDir } = opts;
-  const safeRegional = normalizeRegionalForPath(regional);
-  const dd = normalizeDay(day);
-  const destDir = join(auditDir, dd, safeRegional);
+  const { sourceFilePath, jsonPath, auditDir } = opts;
+  const destDir = getAuditDestDir(opts);
 
   const srcDir = resolve(dirname(sourceFilePath));
   const destDirResolved = resolve(destDir);
   if (srcDir === destDirResolved) {
-    return; // já está no destino
+    return; // já está na pasta de saída: caller já gravou o JSON no lugar certo; ignora movimentação
   }
 
   try {
@@ -57,15 +93,12 @@ export async function moveFileToAuditFolder(opts: MoveToAuditFolderOpts): Promis
     const destPath = join(destDir, basename(sourceFilePath));
     const destJsonPath = join(destDir, basename(jsonPath));
 
-    // Verifica se o arquivo já existe no destino
     if (existsSync(destPath)) {
-      // Arquivo já existe no destino, ignora a movimentação
-      return;
+      return; // arquivo já existe no destino, ignora movimentação
     }
 
     await rename(sourceFilePath, destPath);
     if (existsSync(jsonPath)) {
-      // Verifica se o JSON já existe no destino antes de mover
       if (!existsSync(destJsonPath)) {
         await rename(jsonPath, destJsonPath);
       }
@@ -73,6 +106,5 @@ export async function moveFileToAuditFolder(opts: MoveToAuditFolderOpts): Promis
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`  ✗ Erro ao mover arquivo para auditoria (${basename(sourceFilePath)}): ${msg}`);
-    // não propaga: o processamento continua; o arquivo permanece no lugar original
   }
 }
