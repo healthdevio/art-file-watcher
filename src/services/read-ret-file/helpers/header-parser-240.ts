@@ -33,7 +33,6 @@ export class HeaderParser240 {
       generationTime: this.substring(line, 151, 157), // Hora de geração (HHMMSS)
       fileSequence: this.substring(line, 157, 163), // Número sequencial do arquivo
       recordDensity: this.substring(line, 164, 167), // Densidade de gravação
-      reserved: this.substring(line, 167, 171), // Reservado
       fileCode: this.substring(line, 163, 166), // Código do arquivo (030 ou 040)
     };
   }

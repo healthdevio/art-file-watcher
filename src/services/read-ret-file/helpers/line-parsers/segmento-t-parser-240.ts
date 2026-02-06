@@ -22,7 +22,18 @@ export class SegmentoTParser240 {
       return null;
     }
 
-    // Detectar layout automaticamente
+    const bankCode = FieldExtractors.extractString(line, 0, 3);
+
+    // Banco do Brasil (001): usa schema específico - convênio nos primeiros 7 dígitos do Nosso Número
+    if (bankCode === '001') {
+      const schema = CNAB240.SEGMENTO_T_SCHEMA_BB as unknown as LineSchema<SegmentoT>;
+      return SchemaParser.parse<SegmentoT>(line, schema, {
+        minLength: CNAB240_MIN_LINE_LENGTH,
+        validator: () => true,
+      });
+    }
+
+    // Detectar layout automaticamente (SITCS vs PADRAO_V033)
     const layoutDetection = SegmentTLayoutDetector.detectLayout(line);
 
     // Selecionar schema baseado no layout detectado

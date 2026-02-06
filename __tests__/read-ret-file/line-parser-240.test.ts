@@ -94,6 +94,10 @@ describe('HeaderLoteParser240', () => {
   });
 });
 
+// Linha real do arquivo BB com convênio 3711056 (posições 37-44 = primeiros 7 do Nosso Número)
+const SEGMENTO_T_LINE_BB =
+  '0010001300399T 060575090000000001945 37110568306709486   78306709486     03012026000000000010303237017660                         0900000000000010610000000000000000000000000000000000000   000000000000000000000018361        170273711056     ';
+
 describe('SegmentoTParser240', () => {
   it('deve extrair campos do segmento T', () => {
     const result = SegmentoTParser240.parse(SEGMENTO_T_LINE, '040');
@@ -102,6 +106,15 @@ describe('SegmentoTParser240', () => {
     expect(result?.bankCode).toBe('104');
     expect(result?.agreement).toBeDefined();
     expect(result?.tariff).toBeGreaterThanOrEqual(0);
+  });
+
+  it('deve parsear segmento T do BB (banco 001) com convênio 3711056 nos primeiros 7 do Nosso Número', () => {
+    const result = SegmentoTParser240.parse(SEGMENTO_T_LINE_BB, '040');
+    expect(result).not.toBeNull();
+    expect(result?.segmentType).toBe('T');
+    expect(result?.bankCode).toBe('001');
+    expect(result?.agreement).toBe('3711056');
+    expect(result?.regionalNumber).toBe('37110568306709486');
   });
 
   it('deve usar posição correta do account na versão 030 (corrigido)', () => {

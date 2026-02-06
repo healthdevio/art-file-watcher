@@ -25,7 +25,7 @@ import { formatDateForFilter, getDayFromDateStr, getMonthFromDateStr, getYearFro
 import { logAuditFile, logError, type LogErrorOpts } from './logs';
 
 // Configurações hardcoded conforme especificado
-const AUDIT_DIR = resolve(__dirname, '../../volumes/audit/2026-01');
+const AUDIT_DIR = resolve(__dirname, '../../volumes/audit/test');
 // const AUDIT_DIR = resolve(__dirname, '../../volumes/audit/BB 2026-01');
 // const AUDIT_DIR = resolve(__dirname, '../../volumes/audit/2026-01-22');
 // const AUDIT_DIR = resolve(__dirname, '../../volumes/audit/2025-12');

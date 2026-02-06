@@ -8,6 +8,7 @@ export * from './header-arquivo';
 export * from './header-lote';
 export * from './segmento-t';
 export * from './segmento-t-padrao-v033';
+export * from './segmento-t-bb';
 export * from './segmento-u';
 export * from './segmento-u-padrao-v033';
 export * from './segmento-u-sitcs';

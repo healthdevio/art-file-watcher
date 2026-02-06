@@ -15,7 +15,7 @@ export const saveLogFilters: SaveLogFilter[] = [
   // { creditDate: '2026-01-15', regional: 'BA' },
   // { regional: ['BA', 'PR'] }, 
   {
-    bankCode: ['001', '104'],
+    // bankCode: ['001', '104'],
     regional: [
       'MS',
       'BA',

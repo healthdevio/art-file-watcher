@@ -145,6 +145,54 @@ describe('ReadRetFileService - Arquivos Reais', () => {
     });
   });
 
+  describe('CNAB 240 Banco do Brasil (BB) - convênio 3711056', () => {
+    const bbTestFile = 'TEST_CNAB240_BB_IEDCBR5588501202622040.ret';
+
+    it(`deve ler arquivo ${bbTestFile} corretamente`, async () => {
+      const filePath = join(testDir, bbTestFile);
+      const result = await readService.read(filePath);
+
+      expect(result.success).toBe(true);
+      expect(result.cnabType).toMatch(/CNAB240_(30|40)/);
+      expect(result.data).toBeDefined();
+      expect(result.data?.header).toBeDefined();
+      expect(result.data?.lines).toBeDefined();
+      expect(Array.isArray(result.data?.lines)).toBe(true);
+      expect(result.metadata?.lineCount).toBeGreaterThan(0);
+    });
+
+    it(`deve parsear convênio 3711056 corretamente em ${bbTestFile}`, async () => {
+      const filePath = join(testDir, bbTestFile);
+      const result = await readService.read(filePath);
+
+      expect(result.success).toBe(true);
+      if (result.data && 'lines' in result.data) {
+        const lines = result.data.lines;
+        const segmentTLines = lines.filter(
+          l => l.payload && 'segmentType' in l.payload && l.payload.segmentType === 'T' && 'agreement' in l.payload
+        );
+        const convenio3711056 = segmentTLines.filter(
+          l => l.payload && 'agreement' in l.payload && (l.payload as { agreement: string }).agreement === '3711056'
+        );
+        expect(convenio3711056.length).toBeGreaterThan(0);
+        const first = convenio3711056[0]?.payload as { agreement: string; regionalNumber: string };
+        expect(first.agreement).toBe('3711056');
+        expect(first.regionalNumber).toContain('3711056');
+      }
+    });
+
+    it(`deve ter header com bankCode 001 em ${bbTestFile}`, async () => {
+      const filePath = join(testDir, bbTestFile);
+      const result = await readService.read(filePath);
+
+      expect(result.success).toBe(true);
+      if (result.data && 'header' in result.data) {
+        const header = result.data.header;
+        expect(header.bankCode).toBe('001');
+      }
+    });
+  });
+
   describe('CNAB 400', () => {
     const testFiles = ['TEST_CNAB400_CBR64356101501202620011.ret'].filter(f => {
       try {
