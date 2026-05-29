@@ -158,7 +158,7 @@ deploy:staging:
     DOCKER_TLS_CERTDIR: '/certs'
     ENVIRONMENT: 'homologation'
     TAG: 'latest'
-    WEBHOOK_URL: 'https://portainer-hmg.mutua.com.br/api/webhooks/9b32e5fa-bb5c-4263-94b8-d40be1f5967c'
+    WEBHOOK_URL: 'https://portainer-hmg.mutua.com.br/api/webhooks/6c2aba24-fe97-4500-bd02-211e9cf32e1e'
     IMAGE_NAME: 'registry.mutua.com.br/mutua360/$PROJECT_NAME'
 
   <<: *minio_setup
@@ -196,7 +196,7 @@ deploy:production:
     DOCKER_TLS_CERTDIR: '/certs'
     ENVIRONMENT: 'production'
     TAG: 'stable'
-    WEBHOOK_URL: 'https://portainer.mutua.com.br/api/webhooks/b78143fd-825f-4995-9a33-e103bbc726c4'
+    WEBHOOK_URL: 'https://portainer-stg.mutua.com.br/api/webhooks/3eb34f65-76f4-488e-a515-fba98d012e01'
     IMAGE_NAME: 'registry.mutua.com.br/mutua360/$PROJECT_NAME'
 
   <<: *minio_setup
