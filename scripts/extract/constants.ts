@@ -1,3 +1,14 @@
+import { join, resolve } from 'node:path';
+
+// Diretórios principais
+export const INPUT_DIR = resolve('C:\\Users\\dell\\projects\\s4s\\mutua\\modulo-prestacao-de-art-backend\\volumes\\download\\RetornoParticao\\ABRIL'); // diretório de entrada (leitura)
+export const CACHE_DIR = resolve(__dirname, '../../volumes/audit/cache'); // diretório de cache
+export const OUTPUT_DIR = resolve(__dirname, '../../volumes/audit/output'); // diretório de saída (cópias)
+export const LOG_DIR = resolve(__dirname, '../../volumes/logs');
+export const LOG_FILE = join(LOG_DIR, `errors_${new Date().toISOString().split('T')[0]}.log`);
+export const AUDIT_LOG_FILE = join(LOG_DIR, `audit_files_${new Date().toISOString().split('T')[0]}.log`);
+export const FILE_HASH_CACHE_PATH = join(CACHE_DIR, 'file-hash-cache.json');
+
 // Extensões de arquivos que devem ser IGNORADOS (blacklist)
 // Arquivos com essas extensões não serão processados
 export const CNAB_BLACKLIST_EXTENSIONS = ['.json', '.log', '.txt'];
@@ -16,36 +27,39 @@ export const saveLogFilters: SaveLogFilter[] = [
   // { regional: ['BA', 'PR'] }, 
   {
     // bankCode: ['001', '104'],
-    regional: [
-      'MS',
-      'BA',
-      'PR',
-      'ES',
-      'AC',
-      'AL',
-      'AM',
-      'AP',
-      'DF',
-      'CE',
-      'ES',
-      'GO',
-      'MA',
-      'MG',
-      'MT',
-      'RN',
-      'PB',
-      'PE',
-      'PI',
-      'PR',
-      'RJ',
-      'RO',
-      'RR',
-      'TO',
-      'CE',
-      'MA',
-      'RN',
-      'SE'
-    ]
+    creditDate: '2026-04-17',
+    bankCode: ['001'],
+    // regional: [
+    //   // 'MS',
+    //   // 'BA',
+    //   // 'PR',
+    //   // 'ES',
+    //   // 'AC',
+    //   // 'AL',
+    //   // 'AM',
+    //   // 'AP',
+    //   // 'DF',
+    //   // 'CE',
+    //   // 'ES',
+    //   // 'GO',
+    //   // 'MA',
+    //   // 'MG',
+    //   // 'MT',
+    //   // 'RN',
+    //   // 'PB',
+    //   // 'PE',
+    //   // 'PI',
+    //   // 'PR',
+    //   // 'RJ',
+    //   // 'RO',
+    //   // 'RR',
+    //   // 'TO',
+    //   // 'CE',
+    //   // 'MA',
+    //   // 'RN',
+    //   // 'SE',
+    //   // 'SC'
+    // ]
   },
 ]
 
@@ -84,7 +98,9 @@ export const agreementToRegional = [
   { agreement: '051316', regional: 'SE' },
   { agreement: '081298', regional: '' },
   { agreement: '082036', regional: '' },
-  { agreement: '051159', regional: '' },
+  { agreement: '051159', regional: 'SC', bankCode: '104', mode: '4parts' },
+  { agreement: '3789998', regional: 'SC', bankCode: '001', mode: '4parts' },
+
   { agreement: '054067', regional: '' },
   { agreement: '051367', regional: '' },
   { agreement: '076882', regional: '' },

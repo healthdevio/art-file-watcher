@@ -11,31 +11,26 @@
 
 import { PrismaClient } from '@prisma/client';
 import { createHash } from 'crypto';
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
-import { basename, dirname, join, resolve } from 'node:path';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { basename, join } from 'node:path';
 import PQueue from 'p-queue';
 import { generateFileHash } from '../../src/services/file-hash';
 import type { CNAB240, SegmentoT, SegmentoU } from '../../src/services/read-ret-file/interfaces/CNAB-240';
 import type { CNAB400, DetalheCNAB400 } from '../../src/services/read-ret-file/interfaces/CNAB-400';
 import { ReadRetFileService } from '../../src/services/read-ret-file/read-ret-file.service';
 import { adjustToBrasiliaTimezone, tryDate } from '../../src/services/read-ret-file/schema/core/date-utils';
-import { moveFileToAuditFolder } from './audit';
-import { agreementToRegional, CNAB_BLACKLIST_EXTENSIONS, FILE_TYPE_FILTER } from './constants';
+import { getAuditDestDir, moveFileToAuditFolder } from './audit';
+import { agreementToRegional, AUDIT_LOG_FILE, CACHE_DIR, CNAB_BLACKLIST_EXTENSIONS, FILE_HASH_CACHE_PATH, FILE_TYPE_FILTER, INPUT_DIR, LOG_DIR, LOG_FILE, OUTPUT_DIR } from './constants';
 import { formatDateForFilter, getDayFromDateStr, getMonthFromDateStr, getYearFromDateStr, matchesAuditFilter } from './filters';
 import { logAuditFile, logError, type LogErrorOpts } from './logs';
 
-// Configurações hardcoded conforme especificado
-const AUDIT_DIR = resolve(__dirname, '../../volumes/audit/test');
-// const AUDIT_DIR = resolve(__dirname, '../../volumes/audit/BB 2026-01');
-// const AUDIT_DIR = resolve(__dirname, '../../volumes/audit/2026-01-22');
-// const AUDIT_DIR = resolve(__dirname, '../../volumes/audit/2025-12');
-const LOG_DIR = resolve(__dirname, '../../volumes/audit/logs');
-const LOG_FILE = join(LOG_DIR, `errors_${new Date().toISOString().split('T')[0]}.log`);
-const AUDIT_LOG_FILE = join(LOG_DIR, `audit_files_${new Date().toISOString().split('T')[0]}.log`);
 
 // Limpar arquivos de log no início de cada execução para evitar duplicação entre execuções
 if (!existsSync(LOG_DIR)) {
   mkdirSync(LOG_DIR, { recursive: true });
+}
+if (!existsSync(CACHE_DIR)) {
+  mkdirSync(CACHE_DIR, { recursive: true });
 }
 if (existsSync(LOG_FILE)) {
   writeFileSync(LOG_FILE, '', 'utf-8');
@@ -95,6 +90,33 @@ const logAuditFileOpts = { auditLogFilePath: AUDIT_LOG_FILE, logDir: LOG_DIR, lo
 
 // Cache de hashes de arquivos para evitar recalcular
 const fileHashCache = new Map<string, string>();
+let fileHashCacheDirty = false;
+
+// Carregar cache persistido (se existir)
+try {
+  if (existsSync(FILE_HASH_CACHE_PATH)) {
+    const raw = readFileSync(FILE_HASH_CACHE_PATH, 'utf-8');
+    const parsed = JSON.parse(raw) as Record<string, string>;
+    for (const [k, v] of Object.entries(parsed)) {
+      if (typeof k === 'string' && typeof v === 'string') {
+        fileHashCache.set(k, v);
+      }
+    }
+  }
+} catch {
+  // Se o cache estiver corrompido, apenas ignora e recalcula durante a execução
+}
+
+function persistFileHashCache(): void {
+  if (!fileHashCacheDirty) return;
+  try {
+    const obj = Object.fromEntries(fileHashCache.entries());
+    writeFileSync(FILE_HASH_CACHE_PATH, JSON.stringify(obj, null, 2), 'utf-8');
+    fileHashCacheDirty = false;
+  } catch {
+    // Não falhar o script por erro de escrita de cache
+  }
+}
 
 // Fila para limitar concorrência de upserts (evitar esgotar pool de conexões)
 const UPSERT_CONCURRENCY = 8;
@@ -221,6 +243,7 @@ async function getFileHash(filePath: string): Promise<string> {
 
   const hashResult = await generateFileHash(filePath);
   fileHashCache.set(filePath, hashResult.fileHash);
+  fileHashCacheDirty = true;
   return hashResult.fileHash;
 }
 
@@ -375,8 +398,6 @@ async function processCNAB240File(
   result: { cnabType: string; metadata?: { lineCount?: number; fileSize?: number } },
   cnabData: CNAB240
 ): Promise<void> {
-  const fileDir = dirname(filePath);
-
   // Extrair pares T/U
   // Os segmentos T e U devem estar consecutivos e vinculados pelo mesmo código de movimento e lote
   const tuPairs: Array<{ segmentT: SegmentoT; segmentU: SegmentoU; lineNumber: number }> = [];
@@ -424,8 +445,6 @@ async function processCNAB240File(
     return;
   }
 
-  // Salvar JSON no mesmo diretório
-  const jsonPath = join(fileDir, `${fileName}.json`);
   const jsonData = {
     filePath,
     fileName,
@@ -439,8 +458,6 @@ async function processCNAB240File(
     metadata: result.metadata,
   };
 
-  writeFileSync(jsonPath, JSON.stringify(jsonData, null, 2), 'utf-8');
-
   // Obter hash do arquivo
   const fileHash = await getFileHash(filePath);
 
@@ -450,6 +467,18 @@ async function processCNAB240File(
   // Se atende aos filtros de auditoria: mover para <out_dir>/<year>/<month>/<day>/<regional>/<bankCode>/ e registrar no log
   // Se o arquivo já estiver nessa pasta de saída, apenas reprocessa o JSON (moveFileToAuditFolder ignora a movimentação)
   if (auditInfo) {
+    const destDir = getAuditDestDir({
+      year: auditInfo.year,
+      month: auditInfo.month,
+      day: auditInfo.day,
+      regional: auditInfo.regional,
+      bankCode: auditInfo.bankCode,
+      auditDir: OUTPUT_DIR,
+    });
+    mkdirSync(destDir, { recursive: true });
+    const jsonPath = join(destDir, `${fileName}.json`);
+    writeFileSync(jsonPath, JSON.stringify(jsonData, null, 2), 'utf-8');
+
     await moveFileToAuditFolder({
       sourceFilePath: filePath,
       jsonPath,
@@ -458,7 +487,7 @@ async function processCNAB240File(
       day: auditInfo.day,
       regional: auditInfo.regional,
       bankCode: auditInfo.bankCode,
-      auditDir: AUDIT_DIR,
+      auditDir: OUTPUT_DIR,
     });
     logAuditFile(fileName, auditInfo.reason, logAuditFileOpts);
   }
@@ -476,8 +505,6 @@ async function processCNAB400File(
   result: { cnabType: string; metadata?: { lineCount?: number; fileSize?: number } },
   cnabData: CNAB400
 ): Promise<void> {
-  const fileDir = dirname(filePath);
-
   // Extrair detalhes (tipo de registro 7)
   const detalhes: Array<{ detalhe: DetalheCNAB400; lineNumber: number }> = [];
 
@@ -497,8 +524,6 @@ async function processCNAB400File(
     return;
   }
 
-  // Salvar JSON no mesmo diretório
-  const jsonPath = join(fileDir, `${fileName}.json`);
   const jsonData = {
     filePath,
     fileName,
@@ -511,8 +536,6 @@ async function processCNAB400File(
     metadata: result.metadata,
   };
 
-  writeFileSync(jsonPath, JSON.stringify(jsonData, null, 2), 'utf-8');
-
   // Obter hash do arquivo
   const fileHash = await getFileHash(filePath);
 
@@ -522,6 +545,18 @@ async function processCNAB400File(
   // Se atende aos filtros de auditoria: mover para <out_dir>/<year>/<month>/<day>/<regional>/<bankCode>/ e registrar no log
   // Se o arquivo já estiver nessa pasta de saída, apenas reprocessa o JSON (moveFileToAuditFolder ignora a movimentação)
   if (auditInfo) {
+    const destDir = getAuditDestDir({
+      year: auditInfo.year,
+      month: auditInfo.month,
+      day: auditInfo.day,
+      regional: auditInfo.regional,
+      bankCode: auditInfo.bankCode,
+      auditDir: OUTPUT_DIR,
+    });
+    mkdirSync(destDir, { recursive: true });
+    const jsonPath = join(destDir, `${fileName}.json`);
+    writeFileSync(jsonPath, JSON.stringify(jsonData, null, 2), 'utf-8');
+
     await moveFileToAuditFolder({
       sourceFilePath: filePath,
       jsonPath,
@@ -530,7 +565,7 @@ async function processCNAB400File(
       day: auditInfo.day,
       regional: auditInfo.regional,
       bankCode: auditInfo.bankCode,
-      auditDir: AUDIT_DIR,
+      auditDir: OUTPUT_DIR,
     });
     logAuditFile(fileName, auditInfo.reason, logAuditFileOpts);
   }
@@ -711,17 +746,17 @@ async function main(): Promise<void> {
   console.log('='.repeat(80));
   console.log('Script de Auditoria CNAB 240 - Dezembro 2025');
   console.log('='.repeat(80));
-  console.log(`\nDiretório de auditoria: ${AUDIT_DIR}`);
+  console.log(`\nDiretório de entrada: ${INPUT_DIR}`);
 
   // Verificar se o diretório existe
-  if (!existsSync(AUDIT_DIR)) {
-    console.error(`\n✗ Erro: Diretório não encontrado: ${AUDIT_DIR}`);
+  if (!existsSync(INPUT_DIR)) {
+    console.error(`\n✗ Erro: Diretório não encontrado: ${INPUT_DIR}`);
     process.exit(1);
   }
 
   // Listar arquivos
   console.log('\nListando arquivos CNAB...');
-  const files = listCnabFiles(AUDIT_DIR);
+  const files = listCnabFiles(INPUT_DIR);
   stats.totalFiles = files.length;
 
   console.log(`\n✓ Encontrados ${files.length} arquivos CNAB`);
@@ -769,6 +804,8 @@ async function main(): Promise<void> {
     console.log(`\n📋 Log de arquivos para auditoria salvo em: ${AUDIT_LOG_FILE}`);
     console.log(`   Total de arquivos marcados para auditoria: ${loggedAuditFiles.size}`);
   }
+
+  persistFileHashCache();
 
   // Desconectar Prisma
   await prisma.$disconnect();

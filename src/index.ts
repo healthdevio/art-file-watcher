@@ -68,7 +68,7 @@ program
  * Lê um arquivo de retorno bancário (CNAB)
  * @example `art-w read --file path/to/file.ret`
  * @example `art-w read --file path/to/file.ret --format json --output result.json`
- * @example `npm run dev -- read --file volumes/test/TEST_.ret --json`
+ * @example `npm run dev -- read -- --file volumes/test/TEST_.ret --json`
  */
 program
   .command('read')

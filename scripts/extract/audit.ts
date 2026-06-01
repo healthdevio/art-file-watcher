@@ -4,7 +4,7 @@
  */
 
 import { existsSync } from 'node:fs';
-import { mkdir, rename } from 'node:fs/promises';
+import { copyFile, mkdir } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 
 export interface MoveToAuditFolderOpts {
@@ -93,15 +93,11 @@ export async function moveFileToAuditFolder(opts: MoveToAuditFolderOpts): Promis
     const destPath = join(destDir, basename(sourceFilePath));
     const destJsonPath = join(destDir, basename(jsonPath));
 
-    if (existsSync(destPath)) {
-      return; // arquivo já existe no destino, ignora movimentação
+    if (!existsSync(destPath)) {
+      await copyFile(sourceFilePath, destPath);
     }
-
-    await rename(sourceFilePath, destPath);
-    if (existsSync(jsonPath)) {
-      if (!existsSync(destJsonPath)) {
-        await rename(jsonPath, destJsonPath);
-      }
+    if (existsSync(jsonPath) && !existsSync(destJsonPath)) {
+      await copyFile(jsonPath, destJsonPath);
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

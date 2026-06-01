@@ -1,0 +1,114 @@
+[root@dckr03 ~]# sudo systemctl restart art-file-watcher && journalctl -u art-file-watcher -f
+Mar 31 15:13:22 dckr03.mutua.com.br art-w[2626572]: 11: 0x1633232 v8::internal::Object::SetProperty(v8::internal::LookupIterator*, v8::internal::Handle<v8::internal::Object>, v8::internal::StoreOrigin, v8::Maybe<v8::internal::ShouldThrow>) [/opt/art-file-watcher/art-w]
+Mar 31 15:13:22 dckr03.mutua.com.br art-w[2626572]: 12: 0x1479bd5 v8::internal::StoreIC::Store(v8::internal::Handle<v8::internal::Object>, v8::internal::Handle<v8::internal::Name>, v8::internal::Handle<v8::internal::Object>, v8::internal::StoreOrigin) [/opt/art-file-watcher/art-w]
+Mar 31 15:13:22 dckr03.mutua.com.br art-w[2626572]: 13: 0x147a44c v8::internal::Runtime_StoreIC_Miss(int, unsigned long*, v8::internal::Isolate*) [/opt/art-file-watcher/art-w]
+Mar 31 15:13:22 dckr03.mutua.com.br art-w[2626572]: 14: 0x1bb6239  [/opt/art-file-watcher/art-w]
+Mar 31 15:13:29 dckr03.mutua.com.br systemd-coredump[2685405]: [🡕] Process 2626572 (art-w) of user 0 dumped core.
+
+                                                               Stack trace of thread 2626572:
+                                                               #0  0x0000000000ebf052 _ZN2v84base2OS5AbortEv (art-w + 0xabf052)
+                                                               #1  0x0000000000ebf5fa _Z8V8_FatalPKcz (art-w + 0xabf5fa)
+                                                               #2  0x00000000012e1001 _ZN2v88internal11Deoptimizer30DeoptimizeMarkedCodeForContextENS0_13NativeContextE (art-w + 0xee1001)
+                                                               #3  0x00000000012e13a8 _ZN2v88internal11Deoptimizer20DeoptimizeMarkedCodeEPNS0_7IsolateE (art-w + 0xee13a8)
+                                                               #4  0x00000000016123a9 _ZN2v88internal10MapUpdater15GeneralizeFieldEPNS0_7IsolateENS0_6HandleINS0_3MapEEENS0_13InternalIndexENS0_17PropertyConstnessENS0_14RepresentationENS4_INS0_9FieldTypeEEE (art-w + 0x12123a9)
+                                                               #5  0x00000000016138d5 _ZN2v88internal10MapUpdater32TryReconfigureToDataFieldInplaceEv (art-w + 0x12138d5)
+                                                               #6  0x0000000001613a6c _ZN2v88internal10MapUpdater22ReconfigureToDataFieldENS0_13InternalIndexENS0_18PropertyAttributesENS0_17PropertyConstnessENS0_14RepresentationENS0_6HandleINS0_9FieldTypeEEE (art-w + 0x1213a6c)
+                                                               #7  0x0000000001614588 n/a (art-w + 0x1214588)
+                                                               #8  0x000000000160dc52 _ZN2v88internal14LookupIterator22PrepareForDataPropertyENS0_6HandleINS0_6ObjectEEE (art-w + 0x120dc52)
+                                                               #9  0x00000000016262c6 _ZN2v88internal6Object15SetDataPropertyEPNS0_14LookupIteratorENS0_6HandleIS1_EE (art-w + 0x12262c6)
+                                                               #10 0x0000000001633232 _ZN2v88internal6Object11SetPropertyEPNS0_14LookupIteratorENS0_6HandleIS1_EENS0_11StoreOriginENS_5MaybeINS0_11ShouldThrowEEE (art-w + 0x1233232)
+                                                               #11 0x0000000001479bd5 _ZN2v88internal7StoreIC5StoreENS0_6HandleINS0_6ObjectEEENS2_INS0_4NameEEES4_NS0_11StoreOriginE (art-w + 0x1079bd5)
+                                                               #12 0x000000000147a44c _ZN2v88internal20Runtime_StoreIC_MissEiPmPNS0_7IsolateE (art-w + 0x107a44c)
+                                                               #13 0x0000000001bb6239 n/a (art-w + 0x17b6239)
+                                                               #14 0x0000000001c4a702 n/a (art-w + 0x184a702)
+                                                               #15 0x0000000001b3a290 n/a (art-w + 0x173a290)
+                                                               #16 0x0000000001b3a290 n/a (art-w + 0x173a290)
+                                                               #17 0x0000000001b3a290 n/a (art-w + 0x173a290)
+                                                               #18 0x0000000001b3a290 n/a (art-w + 0x173a290)
+                                                               #19 0x00000000049fdbd5 n/a (n/a + 0x0)
+                                                               #20 0x0000000001b3889c n/a (art-w + 0x173889c)
+                                                               #21 0x0000000001b385c3 n/a (art-w + 0x17385c3)
+                                                               #22 0x0000000001317c22 n/a (art-w + 0xf17c22)
+                                                               #23 0x0000000001318c84 _ZN2v88internal9Execution4CallEPNS0_7IsolateENS0_6HandleINS0_6ObjectEEES6_iPS6_ (art-w + 0xf18c84)
+                                                               #24 0x00000000011f6577 _ZN2v88Function4CallENS_5LocalINS_7ContextEEENS1_INS_5ValueEEEiPS5_ (art-w + 0xdf6577)
+                                                               #25 0x00000000011adc63 n/a (art-w + 0xdadc63)
+                                                               #26 0x0000000000ab6710 n/a (art-w + 0x6b6710)
+                                                               #27 0x0000000000b81dd6 n/a (art-w + 0x781dd6)
+                                                               #28 0x0000000000b8af65 n/a (art-w + 0x78af65)
+                                                               #29 0x00000000011a8d48 n/a (art-w + 0xda8d48)
+                                                               #30 0x000000000095a173 _ZN4node13SpinEventLoopEPNS_11EnvironmentE (art-w + 0x55a173)
+                                                               #31 0x0000000000a4802c _ZN4node16NodeMainInstance3RunEv (art-w + 0x64802c)
+                                                               #32 0x00000000009d0227 _ZN4node5StartEiPPc (art-w + 0x5d0227)
+                                                               #33 0x00007fbb500295d0 __libc_start_call_main (libc.so.6 + 0x295d0)
+                                                               #34 0x00007fbb50029680 __libc_start_main@@GLIBC_2.34 (libc.so.6 + 0x29680)
+                                                               #35 0x000000000094abfc _start (art-w + 0x54abfc)
+
+                                                               Stack trace of thread 2626573:
+                                                               #0  0x00007fbb5010de5e epoll_wait (libc.so.6 + 0x10de5e)
+                                                               #1  0x0000000000b8add3 n/a (art-w + 0x78add3)
+                                                               #2  0x00000000011a8d48 n/a (art-w + 0xda8d48)
+                                                               #3  0x0000000000a71af9 _ZZN4node23WorkerThreadsTaskRunner20DelayedTaskScheduler5StartEvENUlPvE_4_FUNES2_ (art-w + 0x671af9)
+                                                               #4  0x00007fbb500897fa start_thread (libc.so.6 + 0x897fa)
+                                                               #5  0x00007fbb5010e820 __clone3 (libc.so.6 + 0x10e820)
+
+                                                               Stack trace of thread 2626577:
+                                                               #0  0x00007fbb5008688a __futex_abstimed_wait_common (libc.so.6 + 0x8688a)
+                                                               #1  0x00007fbb50088de2 pthread_cond_wait@@GLIBC_2.3.2 (libc.so.6 + 0x88de2)
+                                                               #2  0x0000000000a7189b n/a (art-w + 0x67189b)
+                                                               #3  0x00007fbb500897fa start_thread (libc.so.6 + 0x897fa)
+                                                               #4  0x00007fbb5010e820 __clone3 (libc.so.6 + 0x10e820)
+
+                                                               Stack trace of thread 2626574:
+                                                               #0  0x00007fbb5008688a __futex_abstimed_wait_common (libc.so.6 + 0x8688a)
+                                                               #1  0x00007fbb50088de2 pthread_cond_wait@@GLIBC_2.3.2 (libc.so.6 + 0x88de2)
+                                                               #2  0x0000000000a7189b n/a (art-w + 0x67189b)
+                                                               #3  0x00007fbb500897fa start_thread (libc.so.6 + 0x897fa)
+                                                               #4  0x00007fbb5010e820 __clone3 (libc.so.6 + 0x10e820)
+
+                                                               Stack trace of thread 2626575:
+                                                               #0  0x00007fbb5008688a __futex_abstimed_wait_common (libc.so.6 + 0x8688a)
+                                                               #1  0x00007fbb50088de2 pthread_cond_wait@@GLIBC_2.3.2 (libc.so.6 + 0x88de2)
+                                                               #2  0x0000000000a7189b n/a (art-w + 0x67189b)
+                                                               #3  0x00007fbb500897fa start_thread (libc.so.6 + 0x897fa)
+                                                               #4  0x00007fbb5010e820 __clone3 (libc.so.6 + 0x10e820)
+
+                                                               Stack trace of thread 2626576:
+                                                               #0  0x00007fbb5008688a __futex_abstimed_wait_common (libc.so.6 + 0x8688a)
+                                                               #1  0x00007fbb50088de2 pthread_cond_wait@@GLIBC_2.3.2 (libc.so.6 + 0x88de2)
+                                                               #2  0x0000000000a7189b n/a (art-w + 0x67189b)
+                                                               #3  0x00007fbb500897fa start_thread (libc.so.6 + 0x897fa)
+                                                               #4  0x00007fbb5010e820 __clone3 (libc.so.6 + 0x10e820)
+
+                                                               Stack trace of thread 2626578:
+                                                               #0  0x00007fbb5008688a __futex_abstimed_wait_common (libc.so.6 + 0x8688a)
+                                                               #1  0x00007fbb50088de2 pthread_cond_wait@@GLIBC_2.3.2 (libc.so.6 + 0x88de2)
+                                                               #2  0x0000000000b84b48 n/a (art-w + 0x784b48)
+                                                               #3  0x00007fbb500897fa start_thread (libc.so.6 + 0x897fa)
+                                                               #4  0x00007fbb5010e820 __clone3 (libc.so.6 + 0x10e820)
+
+                                                               Stack trace of thread 2626579:
+                                                               #0  0x00007fbb5008688a __futex_abstimed_wait_common (libc.so.6 + 0x8688a)
+                                                               #1  0x00007fbb50088de2 pthread_cond_wait@@GLIBC_2.3.2 (libc.so.6 + 0x88de2)
+                                                               #2  0x0000000000b84b48 n/a (art-w + 0x784b48)
+                                                               #3  0x00007fbb500897fa start_thread (libc.so.6 + 0x897fa)
+                                                               #4  0x00007fbb5010e820 __clone3 (libc.so.6 + 0x10e820)
+
+                                                               Stack trace of thread 2626580:
+                                                               #0  0x00007fbb5008688a __futex_abstimed_wait_common (libc.so.6 + 0x8688a)
+                                                               #1  0x00007fbb50088de2 pthread_cond_wait@@GLIBC_2.3.2 (libc.so.6 + 0x88de2)
+                                                               #2  0x0000000000b84b48 n/a (art-w + 0x784b48)
+                                                               #3  0x00007fbb500897fa start_thread (libc.so.6 + 0x897fa)
+                                                               #4  0x00007fbb5010e820 __clone3 (libc.so.6 + 0x10e820)
+
+                                                               Stack trace of thread 2626581:
+                                                               #0  0x00007fbb5008688a __futex_abstimed_wait_common (libc.so.6 + 0x8688a)
+                                                               #1  0x00007fbb50088de2 pthread_cond_wait@@GLIBC_2.3.2 (libc.so.6 + 0x88de2)
+                                                               #2  0x0000000000b84b48 n/a (art-w + 0x784b48)
+                                                               #3  0x00007fbb500897fa start_thread (libc.so.6 + 0x897fa)
+                                                               #4  0x00007fbb5010e820 __clone3 (libc.so.6 + 0x10e820)
+                                                               ELF object binary architecture: AMD x86-64
+Mar 31 15:13:29 dckr03.mutua.com.br systemd[1]: art-file-watcher.service: Main process exited, code=dumped, status=5/TRAP
+Mar 31 15:13:29 dckr03.mutua.com.br systemd[1]: art-file-watcher.service: Failed with result 'core-dump'.
+Mar 31 15:13:29 dckr03.mutua.com.br systemd[1]: Stopped ART File Watcher - Monitor de arquivos de retorno de convênios ART.
+Mar 31 15:13:29 dckr03.mutua.com.br systemd[1]: art-file-watcher.service: Consumed 43min 3.727s CPU time.
+Mar 31 15:13:29 dckr03.mutua.com.br systemd[1]: Started ART File Watcher - Monitor de arquivos de retorno de convênios ART.
