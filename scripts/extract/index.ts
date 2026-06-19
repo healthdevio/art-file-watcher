@@ -1,15 +1,15 @@
 /**
- * Script temporário de auditoria de arquivos CNAB 240 e CNAB 400 - Dezembro 2025
- * 
- * Este script processa todos os arquivos de retorno do mês de dezembro de 2025,
- * extrai dados dos segmentos T e U (CNAB 240) ou detalhes (CNAB 400),
- * salva em JSON e insere no banco PostgreSQL.
- * 
+ * Script de auditoria de arquivos CNAB 240 e CNAB 400.
+ *
+ * Extrai dados dos segmentos T e U (CNAB 240) ou detalhes (CNAB 400),
+ * salva JSON filtrado no diretório de saída e opcionalmente insere no PostgreSQL.
+ *
  * Execução:
- *   npx tsx scripts/extract.ts
+ *   npm run extract -- -i ./volumes/test -o ./volumes/audit/output
+ *   npm run extract -- -i ./pasta/retornos -o ./saida --db
  */
 
-import { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
 import { createHash } from 'crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
@@ -20,7 +20,9 @@ import type { CNAB400, DetalheCNAB400 } from '../../src/services/read-ret-file/i
 import { ReadRetFileService } from '../../src/services/read-ret-file/read-ret-file.service';
 import { adjustToBrasiliaTimezone, tryDate } from '../../src/services/read-ret-file/schema/core/date-utils';
 import { getAuditDestDir, moveFileToAuditFolder } from './audit';
-import { agreementToRegional, AUDIT_LOG_FILE, CACHE_DIR, CNAB_BLACKLIST_EXTENSIONS, FILE_HASH_CACHE_PATH, FILE_TYPE_FILTER, INPUT_DIR, LOG_DIR, LOG_FILE, OUTPUT_DIR } from './constants';
+import type { ExtractCliOptions } from './cli';
+import { parseExtractCli } from './cli';
+import { agreementToRegional, AUDIT_LOG_FILE, CACHE_DIR, CNAB_BLACKLIST_EXTENSIONS, FILE_HASH_CACHE_PATH, FILE_TYPE_FILTER, LOG_DIR, LOG_FILE } from './constants';
 import { formatDateForFilter, getDayFromDateStr, getMonthFromDateStr, getYearFromDateStr, matchesAuditFilter } from './filters';
 import { logAuditFile, logError, type LogErrorOpts } from './logs';
 
@@ -57,8 +59,8 @@ function getRegionalByAgreement(agreement: string | null | undefined): string {
   return mapping?.regional || '--';
 }
 
-// Inicializar Prisma Client
-const prisma = new PrismaClient();
+let prisma: PrismaClient | null = null;
+let extractConfig: ExtractCliOptions;
 
 // Estatísticas de processamento
 interface ProcessingStats {
@@ -159,23 +161,13 @@ type AuditReturnRecord = {
   fileSequence: string | null;
 };
 
-/**
- * Faz upsert dos registros na AuditReturn, calcula auditInfo e atualiza stats.
- * Função unificada para CNAB 240 e CNAB 400.
- */
-async function upsertAuditRecords(opts: {
-  fileName: string;
-  records: AuditReturnRecord[];
-  logErrorOpts: LogErrorOpts;
-}): Promise<{ auditInfo: { regional: string; day: string; year: string; month: string; bankCode: string; reason: string } | null }> {
-  const { fileName, records, logErrorOpts } = opts;
+type AuditInfo = { regional: string; day: string; year: string; month: string; bankCode: string; reason: string };
 
-  type AuditInfo = { regional: string; day: string; year: string; month: string; bankCode: string; reason: string };
-  let auditInfo: AuditInfo | null = null;
+function resolveAuditInfo(records: AuditReturnRecord[]): AuditInfo | null {
   for (const r of records) {
     if (r.creditDate && matchesAuditFilter(r.creditDate, r.regional, r.bankCode)) {
       const dateStr = formatDateForFilter(r.creditDate)!;
-      auditInfo = {
+      return {
         regional: r.regional,
         day: getDayFromDateStr(dateStr),
         year: getYearFromDateStr(dateStr),
@@ -183,8 +175,26 @@ async function upsertAuditRecords(opts: {
         bankCode: r.bankCode || '',
         reason: `${r.cnabType}, ${r.bankCode || 'N/A'}, ${dateStr}, ${r.regional}`,
       };
-      break;
     }
+  }
+  return null;
+}
+
+/**
+ * Calcula auditInfo e opcionalmente faz upsert dos registros na AuditReturn.
+ * Função unificada para CNAB 240 e CNAB 400.
+ */
+async function upsertAuditRecords(opts: {
+  fileName: string;
+  records: AuditReturnRecord[];
+  logErrorOpts: LogErrorOpts;
+  useDatabase: boolean;
+}): Promise<{ auditInfo: AuditInfo | null }> {
+  const { fileName, records, logErrorOpts, useDatabase } = opts;
+  const auditInfo = resolveAuditInfo(records);
+
+  if (!useDatabase) {
+    return { auditInfo };
   }
 
   const queue = new PQueue({ concurrency: UPSERT_CONCURRENCY });
@@ -194,7 +204,7 @@ async function upsertAuditRecords(opts: {
   const upsertPromises = records.map((record) =>
     queue.add(async () => {
       try {
-        await prisma.auditReturn.upsert({
+        await prisma!.auditReturn.upsert({
           where: { recordHash: record.recordHash },
           update: record,
           create: record,
@@ -462,7 +472,7 @@ async function processCNAB240File(
   const fileHash = await getFileHash(filePath);
 
   // Inserir registros no banco
-  const { auditInfo } = await insertCNAB240RecordsToDatabase(fileName, result.cnabType, cnabData.header, tuPairs, fileHash, logErrorOpts);
+  const { auditInfo } = await persistCNAB240Records(fileName, result.cnabType, cnabData.header, tuPairs, fileHash, logErrorOpts);
 
   // Se atende aos filtros de auditoria: mover para <out_dir>/<year>/<month>/<day>/<regional>/<bankCode>/ e registrar no log
   // Se o arquivo já estiver nessa pasta de saída, apenas reprocessa o JSON (moveFileToAuditFolder ignora a movimentação)
@@ -473,7 +483,7 @@ async function processCNAB240File(
       day: auditInfo.day,
       regional: auditInfo.regional,
       bankCode: auditInfo.bankCode,
-      auditDir: OUTPUT_DIR,
+      auditDir: extractConfig.outputDir,
     });
     mkdirSync(destDir, { recursive: true });
     const jsonPath = join(destDir, `${fileName}.json`);
@@ -487,7 +497,7 @@ async function processCNAB240File(
       day: auditInfo.day,
       regional: auditInfo.regional,
       bankCode: auditInfo.bankCode,
-      auditDir: OUTPUT_DIR,
+      auditDir: extractConfig.outputDir,
     });
     logAuditFile(fileName, auditInfo.reason, logAuditFileOpts);
   }
@@ -540,7 +550,7 @@ async function processCNAB400File(
   const fileHash = await getFileHash(filePath);
 
   // Inserir registros no banco
-  const { auditInfo } = await insertCNAB400RecordsToDatabase(fileName, result.cnabType, cnabData.header, detalhes, fileHash, logErrorOpts);
+  const { auditInfo } = await persistCNAB400Records(fileName, result.cnabType, cnabData.header, detalhes, fileHash, logErrorOpts);
 
   // Se atende aos filtros de auditoria: mover para <out_dir>/<year>/<month>/<day>/<regional>/<bankCode>/ e registrar no log
   // Se o arquivo já estiver nessa pasta de saída, apenas reprocessa o JSON (moveFileToAuditFolder ignora a movimentação)
@@ -551,7 +561,7 @@ async function processCNAB400File(
       day: auditInfo.day,
       regional: auditInfo.regional,
       bankCode: auditInfo.bankCode,
-      auditDir: OUTPUT_DIR,
+      auditDir: extractConfig.outputDir,
     });
     mkdirSync(destDir, { recursive: true });
     const jsonPath = join(destDir, `${fileName}.json`);
@@ -565,7 +575,7 @@ async function processCNAB400File(
       day: auditInfo.day,
       regional: auditInfo.regional,
       bankCode: auditInfo.bankCode,
-      auditDir: OUTPUT_DIR,
+      auditDir: extractConfig.outputDir,
     });
     logAuditFile(fileName, auditInfo.reason, logAuditFileOpts);
   }
@@ -633,14 +643,14 @@ async function processFile(filePath: string): Promise<void> {
 /**
  * Mapeia pares T/U (CNAB 240) para AuditReturnRecord e chama upsertAuditRecords.
  */
-async function insertCNAB240RecordsToDatabase(
+async function persistCNAB240Records(
   fileName: string,
   cnabType: string,
   header: CNAB240['header'],
   tuPairs: Array<{ segmentT: SegmentoT; segmentU: SegmentoU; lineNumber: number }>,
   fileHash: string,
   logErrorOpts: LogErrorOpts
-): Promise<{ auditInfo: { regional: string; day: string; year: string; month: string; bankCode: string; reason: string } | null }> {
+): Promise<{ auditInfo: AuditInfo | null }> {
   const records: AuditReturnRecord[] = tuPairs.map((pair) => {
     const { segmentT, segmentU, lineNumber } = pair;
     const recordHash = generateRecordHash(fileHash, lineNumber);
@@ -682,20 +692,20 @@ async function insertCNAB240RecordsToDatabase(
       fileSequence: header.fileSequence || null,
     };
   });
-  return upsertAuditRecords({ fileName, records, logErrorOpts });
+  return upsertAuditRecords({ fileName, records, logErrorOpts, useDatabase: extractConfig.useDatabase });
 }
 
 /**
  * Mapeia detalhes (CNAB 400) para AuditReturnRecord e chama upsertAuditRecords.
  */
-async function insertCNAB400RecordsToDatabase(
+async function persistCNAB400Records(
   fileName: string,
   cnabType: string,
   header: CNAB400['header'],
   detalhes: Array<{ detalhe: DetalheCNAB400; lineNumber: number }>,
   fileHash: string,
   logErrorOpts: LogErrorOpts
-): Promise<{ auditInfo: { regional: string; day: string; year: string; month: string; bankCode: string; reason: string } | null }> {
+): Promise<{ auditInfo: AuditInfo | null }> {
   const records: AuditReturnRecord[] = detalhes.map(({ detalhe, lineNumber }) => {
     const recordHash = generateRecordHash(fileHash, lineNumber);
     const agreement = detalhe.agreement;
@@ -736,34 +746,37 @@ async function insertCNAB400RecordsToDatabase(
       fileSequence: header.fileSequence || null,
     };
   });
-  return upsertAuditRecords({ fileName, records, logErrorOpts });
+  return upsertAuditRecords({ fileName, records, logErrorOpts, useDatabase: extractConfig.useDatabase });
 }
 
 /**
  * Função principal
  */
 async function main(): Promise<void> {
-  console.log('='.repeat(80));
-  console.log('Script de Auditoria CNAB 240 - Dezembro 2025');
-  console.log('='.repeat(80));
-  console.log(`\nDiretório de entrada: ${INPUT_DIR}`);
+  extractConfig = parseExtractCli();
 
-  // Verificar se o diretório existe
-  if (!existsSync(INPUT_DIR)) {
-    console.error(`\n✗ Erro: Diretório não encontrado: ${INPUT_DIR}`);
-    process.exit(1);
+  if (extractConfig.useDatabase) {
+    const { PrismaClient } = await import('@prisma/client');
+    prisma = new PrismaClient();
   }
+
+  console.log('='.repeat(80));
+  console.log('Script de Auditoria CNAB 240/400');
+  console.log('='.repeat(80));
+  console.log(`\nDiretório de entrada: ${extractConfig.inputDir}`);
+  console.log(`Diretório de saída: ${extractConfig.outputDir}`);
+  console.log(`Banco de dados: ${extractConfig.useDatabase ? 'habilitado' : 'desabilitado'}`);
 
   // Listar arquivos
   console.log('\nListando arquivos CNAB...');
-  const files = listCnabFiles(INPUT_DIR);
+  const files = listCnabFiles(extractConfig.inputDir);
   stats.totalFiles = files.length;
 
   console.log(`\n✓ Encontrados ${files.length} arquivos CNAB`);
 
   if (files.length === 0) {
     console.log('\nNenhum arquivo para processar. Encerrando...');
-    await prisma.$disconnect();
+    if (prisma) await prisma.$disconnect();
     return;
   }
 
@@ -782,7 +795,11 @@ async function main(): Promise<void> {
   console.log(`Arquivos processados com sucesso: ${stats.processedFiles}`);
   console.log(`Arquivos com erro: ${stats.failedFiles}`);
   console.log(`Total de registros encontrados: ${stats.totalRecords}`);
-  console.log(`Registros inseridos no banco: ${stats.insertedRecords}`);
+  if (extractConfig.useDatabase) {
+    console.log(`Registros inseridos no banco: ${stats.insertedRecords}`);
+  } else {
+    console.log('Banco: desabilitado');
+  }
 
   if (stats.errors.length > 0) {
     console.log(`\nErros encontrados (${stats.errors.length}):`);
@@ -807,8 +824,7 @@ async function main(): Promise<void> {
 
   persistFileHashCache();
 
-  // Desconectar Prisma
-  await prisma.$disconnect();
+  if (prisma) await prisma.$disconnect();
 }
 
 // Executar

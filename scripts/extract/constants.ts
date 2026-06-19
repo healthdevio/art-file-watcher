@@ -1,9 +1,9 @@
 import { join, resolve } from 'node:path';
 
 // Diretórios principais
-export const INPUT_DIR = resolve('C:\\Users\\dell\\projects\\s4s\\mutua\\modulo-prestacao-de-art-backend\\volumes\\download\\RetornoParticao\\ABRIL'); // diretório de entrada (leitura)
+export const DEFAULT_INPUT_DIR = resolve(__dirname, '../../volumes/audit/input'); // diretório de entrada padrão (leitura)
 export const CACHE_DIR = resolve(__dirname, '../../volumes/audit/cache'); // diretório de cache
-export const OUTPUT_DIR = resolve(__dirname, '../../volumes/audit/output'); // diretório de saída (cópias)
+export const DEFAULT_OUTPUT_DIR = resolve(__dirname, '../../volumes/audit/output'); // diretório de saída padrão (cópias)
 export const LOG_DIR = resolve(__dirname, '../../volumes/logs');
 export const LOG_FILE = join(LOG_DIR, `errors_${new Date().toISOString().split('T')[0]}.log`);
 export const AUDIT_LOG_FILE = join(LOG_DIR, `audit_files_${new Date().toISOString().split('T')[0]}.log`);
@@ -20,46 +20,9 @@ export const FILE_TYPE_FILTER: 'CNAB400' | 'CNAB240' | 'ALL' = 'ALL';
 
 type SaveLogFilter = { creditDate?: string | string[]; regional?: string | string[]; bankCode?: string | string[]; }
 export const saveLogFilters: SaveLogFilter[] = [
-  // { creditDate: '2026-01-02', regional: 'PR' },
-  // { creditDate: '2026-01-02', regional: 'BA' },
-  // { creditDate: '2026-01-15', regional: 'PR' },
-  // { creditDate: '2026-01-15', regional: 'BA' },
-  // { regional: ['BA', 'PR'] }, 
   {
-    // bankCode: ['001', '104'],
-    creditDate: '2026-04-17',
     bankCode: ['001'],
-    // regional: [
-    //   // 'MS',
-    //   // 'BA',
-    //   // 'PR',
-    //   // 'ES',
-    //   // 'AC',
-    //   // 'AL',
-    //   // 'AM',
-    //   // 'AP',
-    //   // 'DF',
-    //   // 'CE',
-    //   // 'ES',
-    //   // 'GO',
-    //   // 'MA',
-    //   // 'MG',
-    //   // 'MT',
-    //   // 'RN',
-    //   // 'PB',
-    //   // 'PE',
-    //   // 'PI',
-    //   // 'PR',
-    //   // 'RJ',
-    //   // 'RO',
-    //   // 'RR',
-    //   // 'TO',
-    //   // 'CE',
-    //   // 'MA',
-    //   // 'RN',
-    //   // 'SE',
-    //   // 'SC'
-    // ]
+    creditDate: ['2026-05-08', '2026-05-11', '2026-05-12', '2026-05-13'],
   },
 ]
 
