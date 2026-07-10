@@ -125,9 +125,17 @@ export class FileWatcherService {
 
       const cached = await readCache(hashResult.fileHash);
 
-      if (cached && cached.size === stats.size && cached.modifiedAt === stats.mtimeMs) {
-        this.logger.debug(`Já processado (${hashResult.fileHash}) - ignorando.`);
-        return;
+      if (cached && cached.size === stats.size) {
+        const samePath = cached.filePath === filePath;
+        const sameModifiedAt = cached.modifiedAt === stats.mtimeMs;
+
+        // Cache é indexado por hash (conteúdo). Duplicatas em pastas diferentes
+        // compartilham o mesmo hash, mas podem ter mtime distinto — ainda assim
+        // já foram enviadas. Só reprocessa se for o mesmo caminho com mtime alterado.
+        if (!samePath || sameModifiedAt) {
+          this.logger.debug(`Já processado (${hashResult.fileHash}) - ignorando.`);
+          return;
+        }
       }
 
       // Enfileira o arquivo para upload com callback para escrever no cache após sucesso
