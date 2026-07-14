@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.0.13](https://github.com/healthdevio/art-file-watcher/compare/v1.0.12...v1.0.13) (2026-07-14)
+
+
+### Features
+
+* adiciona documentação para o comando de leitura de arquivos de retorno bancário (CNAB), incluindo opções, exemplos e saídas esperadas ([a56190f](https://github.com/healthdevio/art-file-watcher/commit/a56190f6a02d97fc142956dfc0de2e05c9822119))
+
+
+### Bug Fixes
+
+* ignorar cache por hash quando conteudo duplicado tem mtime distinto ([751d48e](https://github.com/healthdevio/art-file-watcher/commit/751d48e722ff3213830b7b0756fe73ef27610cdf))
+
 ### [1.0.12](https://github.com/healthdevio/art-file-watcher/compare/v1.0.11...v1.0.12) (2026-01-17)
 
 
